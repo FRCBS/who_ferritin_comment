@@ -20,7 +20,7 @@ To find this threshold, they chose a restricted cubic spline model with 5 knots.
 In this report we'll focus on apparently healthy non-pregnant women (by recorded gender, pregnancy status and blood donor eligibility criteria available in the Health 2000 cohort), so here are the results for women in Mei et al. (reproduced without permission!):
 
 <center>
-![Serum ferritin threshold calculation for non-pregnant women](/home/esa/iron_deficiency_comment/fer_comment_files/figure-html/plot_women_mei_et_al.png)
+![Serum ferritin threshold calculation for non-pregnant women](/home/esa/who_ferritin_comment/src/fer_comment_files/figure-html/plot_women_mei_et_al.png)
 </center>
 
 Mei et al. determine the threshold by computing the zero derivatives of the resulting fits, implicitly arguing that the "plateau before the fall/rise" constitutes as the _de facto_ threshold. The threshold generated this way are 25.2 μg/L and 24.0 μg/L for hemoglobin and sTfR, respectively. These vary somewhat when stratifying by age. It is however immediately interesting that these thresholds settle around the same number for both hemoglobin and sTfR, and that they defy the visual inspection of the scatter plot / median line, which points closer to the WHO threshold.
@@ -28,14 +28,14 @@ Mei et al. determine the threshold by computing the zero derivatives of the resu
 Later, in 2022, they replicated their results with Retrovirus Epidemiology Donor Study-II Donor Iron Status Evaluation (REDS-RISE) blood donor data (this time Addo et al.). [[3](https://ashpublications.org/bloodadvances/article/6/12/3661/484681/Physiologically-based-serum-ferritin-thresholds)] 
 
 <center>
-![Concentration curve of serum ferritin against hemoglobin, and soluble transferrin receptor in a sample of women who are blood donors.](/home/esa/iron_deficiency_comment/fer_comment_files/figure-html/addo_et_al.png)
+![Concentration curve of serum ferritin against hemoglobin, and soluble transferrin receptor in a sample of women who are blood donors.](/home/esa/who_ferritin_comment/src/fer_comment_files/figure-html/addo_et_al.png)
 </center>
 
 # Replication
 
 We're now left with a curiosity: why exactly 5 knots? If we were to try to replicate this, we'd be interested in testing fits with more/less knots, or possibly entirely other approaches. We only have hemoglobin and ferritin to work with in the Health 200 cohort, but let's see how the data looks.
 
-## Data visualized
+## H2000 data visualized
 
 
 
@@ -52,22 +52,22 @@ What will the models show?
 
 ```r
 # Fit
-rcs5 <- ols(Hemoglobin ~ rcs(Ferritin, 5), data = apparently_healthy, x = TRUE, y = TRUE)
+rcs5_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 5), data = apparently_healthy, x = TRUE, y = TRUE)
 # Plot fit
-p5 <- ggplot(Predict(rcs5)) + 
+p5_h2000 <- ggplot(Predict(rcs5_h2000)) + 
     geom_vline(xintercept = 19.1053, linetype = "dashed") +
     annotate(geom = "text", label = "19.1 μg/L", x = 34, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs5))), x = 110, y = 144) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs5_h2000))), x = 110, y = 144) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
     theme_minimal() + 
     labs(title = "Restricted cubic spline, 5 knots",
          subtitle = "Apparently healthy non-pregnant women 20-49 y.o.",
          x = "Serum ferritin concentrations (μg/L)",
          y = "Haemoglobin concentration (g/L)")
-p5
+p5_h2000
 ```
 
-<img src="fer_comment_files/figure-html/rcs5-1.png" style="display: block; margin: auto;" />
+<img src="fer_comment_files/figure-html/rcs5_h2000-1.png" style="display: block; margin: auto;" />
 The curve shape is somewhat similar to Mei & Addo et al. with their NHANES study. Our model specification ends up being
 
 $$
@@ -82,7 +82,7 @@ $$
 $\text{where} \space (x)_{+}=x \space \text{if} \space x > 0, 0 \space \text{otherwise}$. The zero derivative can be computed to be **19.1053 μg/L**. This is closer to the current WHO reference value, than the suggested 25 μg/L, but this is just a curiosity at this point. We need to see what happens with other knot structures.
 
 ## 3 to 12 knots
-<img src="fer_comment_files/figure-html/other_knots-1.png" style="display: block; margin: auto;" />
+<img src="fer_comment_files/figure-html/other_knots_h2000-1.png" style="display: block; margin: auto;" />
 
 Which of these restricted cubic spline models is best? Out of these, the 11 knot version has the lowest AIC, but is this the global minimum? And does it differ "enough" from simpler models? We can compute the "probability that model *i* is as good as the one that got the lowest AIC" with
 $$
@@ -92,17 +92,17 @@ The idea is that if the model that gets the minimum AIC does not improve signifi
 
 
 ```r
-rcs8 <- ols(Hemoglobin ~ rcs(Ferritin, 8), data = apparently_healthy, x = TRUE, y = TRUE)
-rcs9 <- ols(Hemoglobin ~ rcs(Ferritin, 9), data = apparently_healthy, x = TRUE, y = TRUE)
-rcs10 <- ols(Hemoglobin ~ rcs(Ferritin, 10), data = apparently_healthy, x = TRUE, y = TRUE)
-rcs12 <- ols(Hemoglobin ~ rcs(Ferritin, 12), data = apparently_healthy, x = TRUE, y = TRUE)
-AIC_min <- min(c(AIC(rcs8), AIC(rcs9), AIC(rcs10), AIC(rcs11), AIC(rcs12)))
+rcs8_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 8), data = apparently_healthy, x = TRUE, y = TRUE)
+rcs9_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 9), data = apparently_healthy, x = TRUE, y = TRUE)
+rcs10_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 10), data = apparently_healthy, x = TRUE, y = TRUE)
+rcs12_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 12), data = apparently_healthy, x = TRUE, y = TRUE)
+AIC_min_h2000 <- min(c(AIC(rcs8_h2000), AIC(rcs9_h2000), AIC(rcs10_h2000), AIC(rcs11_h2000), AIC(rcs12_h2000)))
 # The 11 knot version is indeed the global MIN, we do not need to check the P for the 12 knot version as it increases in complexity and AIC.
 
-P7 <- compare_AIC(AIC_min, AIC(rcs7))
-P8 <- compare_AIC(AIC_min, AIC(rcs8))
-P9 <- compare_AIC(AIC_min, AIC(rcs9))
-P10 <- compare_AIC(AIC_min, AIC(rcs10))
+P7_h2000 <- compare_AIC(AIC_min_h2000, AIC(rcs7_h2000))
+P8_h2000 <- compare_AIC(AIC_min_h2000, AIC(rcs8_h2000))
+P9_h2000 <- compare_AIC(AIC_min_h2000, AIC(rcs9_h2000))
+P10_h2000 <- compare_AIC(AIC_min_h2000, AIC(rcs10_h2000))
 ```
 
 We find that the 11 knot model does not differ significantly (arbitrary 5\% threshold chosen by us) from 10 and 9 knot models (37\% and 7\% probability of being equally good as the 11 knot version, respectively). With this knowledge, we probably ought to go for the 9 knot model. 
@@ -110,39 +110,55 @@ We find that the 11 knot model does not differ significantly (arbitrary 5\% thre
 
 ```r
 # Plot fit
-p9 <- ggplot(Predict(rcs9)) + 
+p9_h2000 <- ggplot(Predict(rcs9_h2000)) + 
     geom_vline(xintercept = 10.2289, linetype = "dashed") +
     annotate(geom = "text", label = "10.2 μg/L", x = 19, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs9))), x = 110, y = 144) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs9_h2000))), x = 110, y = 144) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
     theme_minimal() + 
     labs(title = "Best restricted cubic spline: 9 knots",
          subtitle = "Apparently healthy non-pregnant women 20-49 y.o.",
          x = "Serum ferritin concentrations (μg/L)",
          y = "Haemoglobin concentration (g/L)")
-p9
+p9_h2000
 ```
 
-<img src="fer_comment_files/figure-html/plot_rcs9-1.png" style="display: block; margin: auto;" />
+<img src="fer_comment_files/figure-html/plot_rcs9_h2000-1.png" style="display: block; margin: auto;" />
 
 If this approach is sensible overall is a whole another matter. We arrive at a ferritin threshold greatly below even the WHO recommendation!
 
-Measuring the accuracy of a model like this has its pitfalls. What we're actually interested in is: how well can we find the inflection point for this phenomenon? Restricted cubic splines are handy when we need to define inflection points mathematically, but scoring them greatly outside the point of interest may lead us to select a sub-optimal model. So, what if we only consider the space of 0 - 30 μg/L for serum ferritin?
+## Repeat with FinDonor (and TfR)
 
-## RCS on abridged data
-
-
-<img src="fer_comment_files/figure-html/knots_abr-1.png" style="display: block; margin: auto;" />
-We're skipping the documentation of AIC comparison here. This time, 7 knots is the global minimum. It also passes our significance test against the 6 knot model, so now we're left with an even smaller threshold of 8.4 μg/L.
-
-## Let's transform
-
-Does it help any to log-transform `Ferritin`?
+<img src="fer_comment_files/figure-html/findonor_hb_plot-1.png" style="display: block; margin: auto;" />
 
 
 
-<img src="fer_comment_files/figure-html/plot_log-1.png" style="display: block; margin: auto;" />
+## Varying knots | Hb
+<img src="fer_comment_files/figure-html/other_knots_donors_hb1-1.png" style="display: block; margin: auto;" />
 
+### Compare AIC
+
+```r
+compare_AIC(7016, 7020)
+```
+
+```
+## [1] 0.1353353
+```
+--> Not sufficient evidence to choose between 3 knots and 5 knots.
+
+## Varying knots | TfR
+<img src="fer_comment_files/figure-html/other_knots_donors_hb-1.png" style="display: block; margin: auto;" />
+
+
+```r
+compare_AIC(2661, 2664)
+```
+
+```
+## [1] 0.2231302
+```
+--> Not enough evidence to choose between RCS7-RCS11, but we might be able to still credibly drop RCS11.
 
 # References
 1. World Health Organization. (2020). WHO guideline on use of ferritin concentrations to assess iron status in populations. World Health Organization. ISBN: 978-92-4-000012-4

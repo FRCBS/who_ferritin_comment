@@ -11,7 +11,9 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(rms)
+library(mgcv)
 library(lspline)
+library(AICcmodavg)
 source("~/CRP_enrichment/src/funcs.R") # load our helper functions
 ```
 
@@ -26,7 +28,7 @@ To find this threshold, they chose a restricted cubic spline model with 5 knots.
 In this report we'll focus on apparently healthy non-pregnant women (by recorded gender, pregnancy status and blood donor eligibility criteria available in the Health 2000 cohort), so here are the results for women in Mei et al. (reproduced without permission!):
 
 <center>
-![Serum ferritin threshold calculation for non-pregnant women](/home/esa/iron_deficiency_comment/fer_comment_files/figure-html/plot_women_mei_et_al.png)
+![Serum ferritin threshold calculation for non-pregnant women](/home/esa/who_ferritin_comment/src/fer_comment_files/figure-html/plot_women_mei_et_al.png)
 </center>
 
 Mei et al. determine the threshold by computing the zero derivatives of the resulting fits, implicitly arguing that the "plateau before the fall/rise" constitutes as the _de facto_ threshold. The threshold generated this way are 25.2 μg/L and 24.0 μg/L for hemoglobin and sTfR, respectively. These vary somewhat when stratifying by age. It is however immediately interesting that these thresholds settle around the same number for both hemoglobin and sTfR, and that they defy the visual inspection of the scatter plot / median line, which points closer to the WHO threshold.
@@ -34,14 +36,14 @@ Mei et al. determine the threshold by computing the zero derivatives of the resu
 Later, in 2022, they replicated their results with Retrovirus Epidemiology Donor Study-II Donor Iron Status Evaluation (REDS-RISE) blood donor data (this time Addo et al.). [[3](https://ashpublications.org/bloodadvances/article/6/12/3661/484681/Physiologically-based-serum-ferritin-thresholds)] 
 
 <center>
-![Concentration curve of serum ferritin against hemoglobin, and soluble transferrin receptor in a sample of women who are blood donors.](/home/esa/iron_deficiency_comment/fer_comment_files/figure-html/addo_et_al.png)
+![Concentration curve of serum ferritin against hemoglobin, and soluble transferrin receptor in a sample of women who are blood donors.](/home/esa/who_ferritin_comment/src/fer_comment_files/figure-html/addo_et_al.png)
 </center>
 
 # Replication
 
 We're now left with a curiosity: why exactly 5 knots? If we were to try to replicate this, we'd be interested in testing fits with more/less knots, or possibly entirely other approaches. We only have hemoglobin and ferritin to work with in the Health 200 cohort, but let's see how the data looks.
 
-## Data visualized
+## H2000 data visualized
 
 ```{r load_data, echo = FALSE}
 # Load THL data
@@ -68,6 +70,28 @@ apparently_healthy <- H2000 %>%
     rename(GlycA = GP) %>% # rename for ease of use
     mutate(HbA1C = B_GHb_A1C * 10.93 - 23.50) %>%
     select(Ferritin, Hemoglobin)
+
+# Load data on individual donations
+load("~/CRP_enrichment/data/r02.fd.bd.all.rdata") # outputs an object called "output" into the environment
+donations <- output
+
+# We only want to look at first donation event values from each donor
+donors <- donations %>%
+    group_by(donor) %>%
+    filter(date == min(date)) %>%
+    ungroup()
+
+# Load FinDonor demographic data
+load("~/CRP_enrichment/data/r02ds.donorData.rdata") # outputs an object called "output" into the environment
+findonor <- output
+
+# Combine the FinDonor datasets
+FinDonor <- left_join(donors, findonor, by = "donor")
+
+# Filter
+donors_oi <- FinDonor %>%
+    filter(age >= 20 & age <= 49) %>%
+    filter(gender == "Women")
 ```
 
 ```{r plot_data, warning = FALSE, echo = FALSE, fig.align = "center"}
@@ -82,7 +106,9 @@ dataplot <- ggplot(data = apparently_healthy, aes(x = Ferritin, y = Hemoglobin))
     xlim(c(0, 100)) +
     theme_minimal() +
     labs(title = "When will hemogobin start to fall off?",
-         subtitle = "WHO: maybe at 15 ug/L. Mei & Addo et al.: 25 ug/L.")
+         subtitle = "WHO: maybe at 15 ug/L. Mei & Addo et al.: 25 ug/L.",
+         x = "Ferritin (μg/L)",
+         y = "Hemoglobin (g/L)")
 dataplot
 ```
 
@@ -97,21 +123,21 @@ dd <- datadist(apparently_healthy)
 options(datadist = "dd")
 ```
 
-```{r rcs5, warning = FALSE,  fig.align = "center"}
+```{r rcs5_h2000, warning = FALSE,  fig.align = "center"}
 # Fit
-rcs5 <- ols(Hemoglobin ~ rcs(Ferritin, 5), data = apparently_healthy, x = TRUE, y = TRUE)
+rcs5_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 5), data = apparently_healthy, x = TRUE, y = TRUE)
 # Plot fit
-p5 <- ggplot(Predict(rcs5)) + 
+p5_h2000 <- ggplot(Predict(rcs5_h2000)) + 
     geom_vline(xintercept = 19.1053, linetype = "dashed") +
     annotate(geom = "text", label = "19.1 μg/L", x = 34, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs5))), x = 110, y = 144) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs5_h2000))), x = 110, y = 144) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
     theme_minimal() + 
     labs(title = "Restricted cubic spline, 5 knots",
          subtitle = "Apparently healthy non-pregnant women 20-49 y.o.",
          x = "Serum ferritin concentrations (μg/L)",
          y = "Haemoglobin concentration (g/L)")
-p5
+p5_h2000
 ```
 The curve shape is somewhat similar to Mei & Addo et al. with their NHANES study. Our model specification ends up being
 
@@ -127,17 +153,17 @@ $$
 $\text{where} \space (x)_{+}=x \space \text{if} \space x > 0, 0 \space \text{otherwise}$. The zero derivative can be computed to be **19.1053 μg/L**. This is closer to the current WHO reference value, than the suggested 25 μg/L, but this is just a curiosity at this point. We need to see what happens with other knot structures.
 
 ## 3 to 12 knots
-```{r other_knots, warning = FALSE, echo = FALSE, fig.align = "center", fig.height = 12, fig.width = 8}
-rcs3 <- ols(Hemoglobin ~ rcs(Ferritin, 3), data = apparently_healthy, x = TRUE, y = TRUE)
-rcs4 <- ols(Hemoglobin ~ rcs(Ferritin, 4), data = apparently_healthy, x = TRUE, y = TRUE)
-rcs6 <- ols(Hemoglobin ~ rcs(Ferritin, 6), data = apparently_healthy, x = TRUE, y = TRUE)
-rcs7 <- ols(Hemoglobin ~ rcs(Ferritin, 7), data = apparently_healthy, x = TRUE, y = TRUE)
-rcs11 <- ols(Hemoglobin ~ rcs(Ferritin, 11), data = apparently_healthy, x = TRUE, y = TRUE)
+```{r other_knots_h2000, warning = FALSE, echo = FALSE, fig.align = "center", fig.height = 12, fig.width = 8}
+rcs3_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 3), data = apparently_healthy, x = TRUE, y = TRUE)
+rcs4_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 4), data = apparently_healthy, x = TRUE, y = TRUE)
+rcs6_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 6), data = apparently_healthy, x = TRUE, y = TRUE)
+rcs7_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 7), data = apparently_healthy, x = TRUE, y = TRUE)
+rcs11_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 11), data = apparently_healthy, x = TRUE, y = TRUE)
 
-p3 <- ggplot(Predict(rcs3)) + 
+p3_h2000 <- ggplot(Predict(rcs3_h2000)) + 
     geom_vline(xintercept = 61.9334, linetype = "dashed") +
     annotate(geom = "text", label = "61.9 μg/L", x = 77, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs3))), x = 110, y = 144) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs3_h2000))), x = 110, y = 144) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
     theme_minimal() + 
     labs(title = "Restricted cubic spline, 3 knots",
@@ -145,10 +171,10 @@ p3 <- ggplot(Predict(rcs3)) +
          x = "Serum ferritin concentrations (μg/L)",
          y = "Haemoglobin concentration (g/L)")
 
-p4 <- ggplot(Predict(rcs4)) + 
+p4_h2000 <- ggplot(Predict(rcs4_h2000)) + 
     geom_vline(xintercept = 27.6437, linetype = "dashed") +
     annotate(geom = "text", label = "27.6 μg/L", x = 42, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs4))), x = 110, y = 144) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs4_h2000))), x = 110, y = 144) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
     theme_minimal() + 
     labs(title = "Restricted cubic spline, 4 knots",
@@ -156,10 +182,10 @@ p4 <- ggplot(Predict(rcs4)) +
          x = "Serum ferritin concentrations (μg/L)",
          y = "Haemoglobin concentration (g/L)")
 
-p6 <- ggplot(Predict(rcs6)) + 
+p6_h2000 <- ggplot(Predict(rcs6_h2000)) + 
     geom_vline(xintercept = 15.2834, linetype = "dashed") +
     annotate(geom = "text", label = "15.3 μg/L", x = 30, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs6))), x = 110, y = 144) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs6_h2000))), x = 110, y = 144) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
     theme_minimal() + 
     labs(title = "Restricted cubic spline, 6 knots",
@@ -167,10 +193,10 @@ p6 <- ggplot(Predict(rcs6)) +
          x = "Serum ferritin concentrations (μg/L)",
          y = "Haemoglobin concentration (g/L)")
 
-p7 <- ggplot(Predict(rcs7)) + 
+p7_h2000 <- ggplot(Predict(rcs7_h2000)) + 
     geom_vline(xintercept = 12.2429, linetype = "dashed") +
     annotate(geom = "text", label = "12.2 μg/L", x = 27, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs7))), x = 110, y = 144) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs7_h2000))), x = 110, y = 144) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
     theme_minimal() + 
     labs(title = "Restricted cubic spline, 7 knots",
@@ -178,10 +204,10 @@ p7 <- ggplot(Predict(rcs7)) +
          x = "Serum ferritin concentrations (μg/L)",
          y = "Haemoglobin concentration (g/L)")
 
-p11 <- ggplot(Predict(rcs11)) + 
+p11_h2000 <- ggplot(Predict(rcs11_h2000)) + 
     geom_vline(xintercept = 8.60749, linetype = "dashed") +
     annotate(geom = "text", label = "8.6 μg/L", x = 23, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs11))), x = 110, y = 144) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs11_h2000))), x = 110, y = 144) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
     theme_minimal() + 
     labs(title = "Restricted cubic spline, 11 knots",
@@ -189,7 +215,7 @@ p11 <- ggplot(Predict(rcs11)) +
          x = "Serum ferritin concentrations (μg/L)",
          y = "Haemoglobin concentration (g/L)")
 
-multiplot(p3, p4, p5, p6, p7, p11, cols = 2)
+multiplot(p3_h2000, p4_h2000, p5_h2000, p6_h2000, p7_h2000, p11_h2000, cols = 2)
 ```
 
 Which of these restricted cubic spline models is best? Out of these, the 11 knot version has the lowest AIC, but is this the global minimum? And does it differ "enough" from simpler models? We can compute the "probability that model *i* is as good as the one that got the lowest AIC" with
@@ -198,152 +224,295 @@ $$
 $$
 The idea is that if the model that gets the minimum AIC does not improve significantly from another, we may want to not discriminate between them. Let us choose a significance level of 5\%.
 
-```{r AIC_comparison}
-rcs8 <- ols(Hemoglobin ~ rcs(Ferritin, 8), data = apparently_healthy, x = TRUE, y = TRUE)
-rcs9 <- ols(Hemoglobin ~ rcs(Ferritin, 9), data = apparently_healthy, x = TRUE, y = TRUE)
-rcs10 <- ols(Hemoglobin ~ rcs(Ferritin, 10), data = apparently_healthy, x = TRUE, y = TRUE)
-rcs12 <- ols(Hemoglobin ~ rcs(Ferritin, 12), data = apparently_healthy, x = TRUE, y = TRUE)
-AIC_min <- min(c(AIC(rcs8), AIC(rcs9), AIC(rcs10), AIC(rcs11), AIC(rcs12)))
+```{r AIC_comparison_h2000}
+rcs8_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 8), data = apparently_healthy, x = TRUE, y = TRUE)
+rcs9_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 9), data = apparently_healthy, x = TRUE, y = TRUE)
+rcs10_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 10), data = apparently_healthy, x = TRUE, y = TRUE)
+rcs12_h2000 <- ols(Hemoglobin ~ rcs(Ferritin, 12), data = apparently_healthy, x = TRUE, y = TRUE)
+AIC_min_h2000 <- min(c(AIC(rcs8_h2000), AIC(rcs9_h2000), AIC(rcs10_h2000), AIC(rcs11_h2000), AIC(rcs12_h2000)))
 # The 11 knot version is indeed the global MIN, we do not need to check the P for the 12 knot version as it increases in complexity and AIC.
 
-P7 <- compare_AIC(AIC_min, AIC(rcs7))
-P8 <- compare_AIC(AIC_min, AIC(rcs8))
-P9 <- compare_AIC(AIC_min, AIC(rcs9))
-P10 <- compare_AIC(AIC_min, AIC(rcs10))
+P7_h2000 <- compare_AIC(AIC_min_h2000, AIC(rcs7_h2000))
+P8_h2000 <- compare_AIC(AIC_min_h2000, AIC(rcs8_h2000))
+P9_h2000 <- compare_AIC(AIC_min_h2000, AIC(rcs9_h2000))
+P10_h2000 <- compare_AIC(AIC_min_h2000, AIC(rcs10_h2000))
 ```
 
 We find that the 11 knot model does not differ significantly (arbitrary 5\% threshold chosen by us) from 10 and 9 knot models (37\% and 7\% probability of being equally good as the 11 knot version, respectively). With this knowledge, we probably ought to go for the 9 knot model. 
 
-```{r plot_rcs9, fig.align = "center", warning = FALSE}
+```{r plot_rcs9_h2000, fig.align = "center", warning = FALSE}
 # Plot fit
-p9 <- ggplot(Predict(rcs9)) + 
+p9_h2000 <- ggplot(Predict(rcs9_h2000)) + 
     geom_vline(xintercept = 10.2289, linetype = "dashed") +
     annotate(geom = "text", label = "10.2 μg/L", x = 19, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs9))), x = 110, y = 144) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs9_h2000))), x = 110, y = 144) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
     theme_minimal() + 
     labs(title = "Best restricted cubic spline: 9 knots",
          subtitle = "Apparently healthy non-pregnant women 20-49 y.o.",
          x = "Serum ferritin concentrations (μg/L)",
          y = "Haemoglobin concentration (g/L)")
-p9
+p9_h2000
 ```
 
 If this approach is sensible overall is a whole another matter. We arrive at a ferritin threshold greatly below even the WHO recommendation!
 
-Measuring the accuracy of a model like this has its pitfalls. What we're actually interested in is: how well can we find the inflection point for this phenomenon? Restricted cubic splines are handy when we need to define inflection points mathematically, but scoring them greatly outside the point of interest may lead us to select a sub-optimal model. So, what if we only consider the space of 0 - 30 μg/L for serum ferritin?
+## Repeat with FinDonor (and TfR)
 
-## RCS on abridged data
-```{r cut_data, echo = FALSE}
-abridged <- apparently_healthy %>% 
-    filter(Ferritin <= 30)
-
-da <- datadist(abridged)
-options(datadist = "da")
-```
-
-```{r knots_abr, warning = FALSE, echo = FALSE, fig.align = "center", fig.height = 12, fig.width = 8}
-rcs3 <- ols(Hemoglobin ~ rcs(Ferritin, 3), data = abridged, x = TRUE, y = TRUE)
-rcs4 <- ols(Hemoglobin ~ rcs(Ferritin, 4), data = abridged, x = TRUE, y = TRUE)
-rcs5 <- ols(Hemoglobin ~ rcs(Ferritin, 5), data = abridged, x = TRUE, y = TRUE)
-rcs6 <- ols(Hemoglobin ~ rcs(Ferritin, 6), data = abridged, x = TRUE, y = TRUE)
-rcs7 <- ols(Hemoglobin ~ rcs(Ferritin, 7), data = abridged, x = TRUE, y = TRUE)
-rcs11 <- ols(Hemoglobin ~ rcs(Ferritin, 11), data = abridged, x = TRUE, y = TRUE)
-
-p3 <- ggplot(Predict(rcs3)) + 
-    geom_vline(xintercept = 20.2842, linetype = "dashed") +
-    annotate(geom = "text", label = "20.3 μg/L", x = 25, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs3))), x = 35, y = 135) + 
-    scale_x_continuous(breaks = c(0, 20, 40), limits = c(0, 40)) +
-    theme_minimal() + 
-    labs(title = "Restricted cubic spline, 3 knots",
-         subtitle = "Apparently healthy non-pregnant women 20-49 y.o.",
-         x = "Serum ferritin concentrations (μg/L)",
-         y = "Haemoglobin concentration (g/L)")
-
-p4 <- ggplot(Predict(rcs4)) + 
-    geom_vline(xintercept = 13.5008, linetype = "dashed") +
-    annotate(geom = "text", label = "13.5 μg/L", x = 18, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs4))), x = 35, y = 135) + 
-    scale_x_continuous(breaks = c(0, 20, 40), limits = c(0, 40)) +
-    theme_minimal() + 
-    labs(title = "Restricted cubic spline, 4 knots",
-         subtitle = "Apparently healthy non-pregnant women 20-49 y.o.",
-         x = "Serum ferritin concentrations (μg/L)",
-         y = "Haemoglobin concentration (g/L)")
-
-p5 <- ggplot(Predict(rcs5)) + 
-    geom_vline(xintercept = 10.9419, linetype = "dashed") +
-    annotate(geom = "text", label = "10.9 μg/L", x = 16, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs5))), x = 35, y = 135) + 
-    scale_x_continuous(breaks = c(0, 20, 40), limits = c(0, 40)) +
-    theme_minimal() + 
-    labs(title = "Restricted cubic spline, 5 knots",
-         subtitle = "Apparently healthy non-pregnant women 20-49 y.o.",
-         x = "Serum ferritin concentrations (μg/L)",
-         y = "Haemoglobin concentration (g/L)")
-
-p6 <- ggplot(Predict(rcs6)) + 
-    geom_vline(xintercept = 9.41631, linetype = "dashed") +
-    annotate(geom = "text", label = "9.4 μg/L", x = 14, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs6))), x = 35, y = 135) + 
-    scale_x_continuous(breaks = c(0, 20, 40), limits = c(0, 40)) +
-    theme_minimal() + 
-    labs(title = "Restricted cubic spline, 6 knots",
-         subtitle = "Apparently healthy non-pregnant women 20-49 y.o.",
-         x = "Serum ferritin concentrations (μg/L)",
-         y = "Haemoglobin concentration (g/L)")
-
-p7 <- ggplot(Predict(rcs7)) + 
-    geom_vline(xintercept = 8.38659, linetype = "dashed") +
-    annotate(geom = "text", label = "8.4 μg/L", x = 14, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs7))), x = 35, y = 135) + 
-    scale_x_continuous(breaks = c(0, 20, 40), limits = c(0, 40)) +
-    theme_minimal() + 
-    labs(title = "Restricted cubic spline, 7 knots",
-         subtitle = "Apparently healthy non-pregnant women 20-49 y.o.",
-         x = "Serum ferritin concentrations (μg/L)",
-         y = "Haemoglobin concentration (g/L)")
-
-p11 <- ggplot(Predict(rcs11)) + 
-    geom_vline(xintercept = 7.33092, linetype = "dashed") +
-    annotate(geom = "text", label = "7.3 μg/L", x = 12, y = 140) +
-    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs11))), x = 35, y = 135) + 
-    scale_x_continuous(breaks = c(0, 20, 40), limits = c(0, 40)) +
-    theme_minimal() + 
-    labs(title = "Restricted cubic spline, 11 knots",
-         subtitle = "Apparently healthy non-pregnant women 20-49 y.o.",
-         x = "Serum ferritin concentrations (μg/L)",
-         y = "Haemoglobin concentration (g/L)")
-
-multiplot(p3, p4, p5, p6, p7, p11, cols = 2)
-```
-We're skipping the documentation of AIC comparison here. This time, 7 knots is the global minimum. It also passes our significance test against the 6 knot model, so now we're left with an even smaller threshold of 8.4 μg/L.
-
-## Let's transform
-
-Does it help any to log-transform `Ferritin`?
-
-```{r logtransform, echo = FALSE}
-log_healthy <- apparently_healthy %>% mutate(Ferritin = log(Ferritin))
-```
-
-```{r plot_log, echo = FALSE, warning = FALSE, fig.align = "center"}
+```{r findonor_hb_plot, echo = FALSE, warning = FALSE, fig.align = "center", fig.width = 12}
 # Plot Hemoglobin v. Ferritin
-dataplot <- ggplot(data = log_healthy, aes(x = Ferritin, y = Hemoglobin)) + 
+dataplot_hb <- ggplot(data = donors_oi, aes(x = Ferritin, y = Hb)) + 
     geom_point(alpha = .3) + 
     geom_smooth(method = "gam", formula =  y ~ s(x, bs = "cr")) +
-    geom_vline(xintercept = log(15), linetype = "dashed") +
-    geom_vline(xintercept = log(25), linetype = "dashed") +
-    annotate(geom = "text", label = "15 ug/L", x = log(7), y = 170) +
-    annotate(geom = "text", label = "25 ug/L", x = log(34), y = 170) +
-    #xlim(c(0, 100)) +
+    geom_vline(xintercept = 15, linetype = "dashed") +
+    geom_vline(xintercept = 25, linetype = "dashed") +
+    annotate(geom = "text", label = "15 ug/L", x = 7, y = 170) +
+    annotate(geom = "text", label = "25 ug/L", x = 34, y = 170) +
+    xlim(c(0, 100)) +
     theme_minimal() +
     labs(title = "When will hemogobin start to fall off?",
-         subtitle = "WHO: maybe at 15 ug/L. Mei & Addo et al.: 25 ug/L.")
-dataplot
+         subtitle = "WHO: maybe at 15 ug/L. Mei & Addo et al.: 25 ug/L.",
+         x = "Ferritin (μg/L)",
+         y = "Hemoglobin (g/L)")
+# Plot TfR v. Ferritin
+dataplot_tfr <- ggplot(data = donors_oi, aes(x = Ferritin, y = TransferrinR)) + 
+    geom_point(alpha = .3) + 
+    geom_smooth(method = "gam", formula =  y ~ s(x, bs = "cr")) +
+    geom_vline(xintercept = 15, linetype = "dashed") +
+    geom_vline(xintercept = 25, linetype = "dashed") +
+    annotate(geom = "text", label = "15 ug/L", x = 7, y = 10) +
+    annotate(geom = "text", label = "25 ug/L", x = 34, y = 10) +
+    xlim(c(0, 100)) +
+    theme_minimal() +
+    labs(title = "When will TfR start to rise?",
+         subtitle = "WHO: maybe at 15 ug/L. Mei & Addo et al.: 25 ug/L.",
+         x = "Ferritin (μg/L)",
+         y = "TfR (mg/L)")
+
+multiplot(dataplot_hb, dataplot_tfr, cols = 2)
 ```
 
+```{r set_datadist_donors, echo = FALSE, warning = FALSE}
+d <- datadist(donors_oi)
+options(datadist = "d")
+```
+
+## Varying knots | Hb
+```{r other_knots_donors_hb1, warning = FALSE, echo = FALSE, fig.align = "center", fig.width = 8, fig.height = 20}
+rcs3_donors_hb <- ols(Hb ~ rcs(Ferritin, 3), data = donors_oi, x = TRUE, y = TRUE)
+rcs4_donors_hb <- ols(Hb ~ rcs(Ferritin, 4), data = donors_oi, x = TRUE, y = TRUE)
+rcs5_donors_hb <- ols(Hb ~ rcs(Ferritin, 5), data = donors_oi, x = TRUE, y = TRUE)
+rcs6_donors_hb <- ols(Hb ~ rcs(Ferritin, 6), data = donors_oi, x = TRUE, y = TRUE)
+rcs7_donors_hb <- ols(Hb ~ rcs(Ferritin, 7), data = donors_oi, x = TRUE, y = TRUE)
+rcs8_donors_hb <- ols(Hb ~ rcs(Ferritin, 8), data = donors_oi, x = TRUE, y = TRUE)
+rcs9_donors_hb <- ols(Hb ~ rcs(Ferritin, 9), data = donors_oi, x = TRUE, y = TRUE)
+rcs10_donors_hb <- ols(Hb ~ rcs(Ferritin, 10), data = donors_oi, x = TRUE, y = TRUE)
+rcs11_donors_hb <- ols(Hb ~ rcs(Ferritin, 11), data = donors_oi, x = TRUE, y = TRUE)
+
+p3_donors <- ggplot(Predict(rcs3_donors_hb)) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs3_donors_hb))), x = 110, y = 144) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 3 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "Haemoglobin concentration (g/L)")
+
+p4_donors <- ggplot(Predict(rcs4_donors_hb)) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs4_donors_hb))), x = 110, y = 144) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 4 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "Haemoglobin concentration (g/L)")
+
+p5_donors <- ggplot(Predict(rcs5_donors_hb)) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs5_donors_hb))), x = 110, y = 144) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 5 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "Haemoglobin concentration (g/L)")
+
+p6_donors <- ggplot(Predict(rcs6_donors_hb)) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs6_donors_hb))), x = 110, y = 144) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 6 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "Haemoglobin concentration (g/L)")
+
+p7_donors <- ggplot(Predict(rcs7_donors_hb)) + 
+    geom_vline(xintercept = 21, linetype = "dashed") +
+    annotate(geom = "text", label = "21 μg/L", x = 36, y = 140) +
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs7_donors_hb))), x = 110, y = 144) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 7 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "Haemoglobin concentration (g/L)")
+
+p8_donors <- ggplot(Predict(rcs8_donors_hb)) + 
+    geom_vline(xintercept = 21, linetype = "dashed") +
+    annotate(geom = "text", label = "21 μg/L", x = 36, y = 140) +
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs8_donors_hb))), x = 110, y = 144) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 8 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "Haemoglobin concentration (g/L)")
+
+p9_donors <- ggplot(Predict(rcs9_donors_hb)) + 
+    geom_vline(xintercept = 21, linetype = "dashed") +
+    annotate(geom = "text", label = "21 μg/L", x = 36, y = 140) +
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs9_donors_hb))), x = 110, y = 144) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 9 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "Haemoglobin concentration (g/L)")
+
+p10_donors <- ggplot(Predict(rcs10_donors_hb)) + 
+    geom_vline(xintercept = 21, linetype = "dashed") +
+    annotate(geom = "text", label = "21 μg/L", x = 36, y = 140) +
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs10_donors_hb))), x = 110, y = 144) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 10 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "Haemoglobin concentration (g/L)")
+
+p11_donors <- ggplot(Predict(rcs11_donors_hb)) + 
+    geom_vline(xintercept = 21, linetype = "dashed") +
+    annotate(geom = "text", label = "21 μg/L", x = 36, y = 140) +
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs11_donors_hb))), x = 110, y = 144) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 11 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "Haemoglobin concentration (g/L)")
+
+multiplot(p3_donors, p4_donors, p5_donors, p6_donors, p7_donors, p8_donors, p9_donors, p10_donors, p11_donors, cols = 2)
+```
+
+### Compare AIC
+```{r compare_AIC_donors_hb}
+compare_AIC(7016, 7020)
+```
+--> Not sufficient evidence to choose between 3 knots and 5 knots.
+
+## Varying knots | TfR
+```{r other_knots_donors_hb,  echo = FALSE, fig.align = "center", fig.height = 20, fig.width = 8}
+rcs3_donors_TfR <- ols(TransferrinR ~ rcs(Ferritin, 3), data = donors_oi, x = TRUE, y = TRUE)
+rcs4_donors_TfR <- ols(TransferrinR ~ rcs(Ferritin, 4), data = donors_oi, x = TRUE, y = TRUE)
+rcs5_donors_TfR <- ols(TransferrinR ~ rcs(Ferritin, 5), data = donors_oi, x = TRUE, y = TRUE)
+rcs6_donors_TfR <- ols(TransferrinR ~ rcs(Ferritin, 6), data = donors_oi, x = TRUE, y = TRUE)
+rcs7_donors_TfR <- ols(TransferrinR ~ rcs(Ferritin, 7), data = donors_oi, x = TRUE, y = TRUE)
+rcs8_donors_TfR <- ols(TransferrinR ~ rcs(Ferritin, 8), data = donors_oi, x = TRUE, y = TRUE)
+rcs9_donors_TfR <- ols(TransferrinR ~ rcs(Ferritin, 9), data = donors_oi, x = TRUE, y = TRUE)
+rcs10_donors_TfR <- ols(TransferrinR ~ rcs(Ferritin, 10), data = donors_oi, x = TRUE, y = TRUE)
+rcs11_donors_TfR <- ols(TransferrinR ~ rcs(Ferritin, 11), data = donors_oi, x = TRUE, y = TRUE)
+
+p3_donors_TfR <- ggplot(Predict(rcs3_donors_TfR)) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs3_donors_TfR))), x = 110, y = 5) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 3 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "TfR (mg/L)")
+
+p4_donors_TfR <- ggplot(Predict(rcs4_donors_TfR)) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs4_donors_TfR))), x = 110, y = 5) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 4 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "TfR (mg/L)")
+
+p5_donors_TfR <- ggplot(Predict(rcs5_donors_TfR)) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs5_donors_TfR))), x = 110, y = 5) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 5 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "TfR (mg/L)")
+
+p6_donors_TfR <- ggplot(Predict(rcs6_donors_TfR)) + 
+    geom_vline(xintercept = 21, linetype = "dashed") +
+    annotate(geom = "text", label = "21 μg/L", x = 36, y = 6) +
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs6_donors_TfR))), x = 110, y = 6) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 6 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "TfR (mg/L)")
+
+p7_donors_TfR <- ggplot(Predict(rcs7_donors_TfR)) + 
+    geom_vline(xintercept = 20, linetype = "dashed") +
+    annotate(geom = "text", label = "20 μg/L", x = 36, y = 6) +
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs7_donors_TfR))), x = 110, y = 6) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 7 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "TfR (mg/L)")
+
+p8_donors_TfR <- ggplot(Predict(rcs8_donors_TfR)) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs8_donors_TfR))), x = 110, y = 6) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 8 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "TfR (mg/L)")
+
+p9_donors_TfR <- ggplot(Predict(rcs9_donors_TfR)) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs9_donors_TfR))), x = 110, y = 6) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 9 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "TfR (mg/L)")
+
+p10_donors_TfR <- ggplot(Predict(rcs10_donors_TfR)) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs10_donors_TfR))), x = 110, y = 6) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 7 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "TfR (mg/L)")
+
+p11_donors_TfR <- ggplot(Predict(rcs11_donors_TfR)) + 
+    annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs11_donors_TfR))), x = 110, y = 6) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = "Restricted cubic spline, 11 knots",
+         subtitle = "Donating women 20-49 y.o.",
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "TfR (mg/L)")
+
+multiplot(p3_donors_TfR, p4_donors_TfR, p5_donors_TfR, p6_donors_TfR, p7_donors_TfR, p8_donors_TfR, p9_donors_TfR, p10_donors_TfR, p11_donors_TfR, cols = 2)
+```
+
+```{r compare_AIC_TfR}
+compare_AIC(2661, 2664)
+```
+--> Not enough evidence to choose between RCS7-RCS11, but we might be able to still credibly drop RCS11.
 
 # References
 1. World Health Organization. (2020). WHO guideline on use of ferritin concentrations to assess iron status in populations. World Health Organization. ISBN: 978-92-4-000012-4
