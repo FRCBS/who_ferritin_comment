@@ -160,6 +160,511 @@ compare_AIC(2661, 2664)
 ```
 --> Not enough evidence to choose between RCS7-RCS11, but we might be able to still credibly drop RCS11.
 
+## Now make it Bayesian
+
+### Hb ~ s(Ferritin)
+
+
+```r
+bay <- stan_gamm4(Hb ~ s(Ferritin), data = donors_oi, seed = 100)
+```
+
+```
+## 
+## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 1).
+## Chain 1: 
+## Chain 1: Gradient evaluation took 3.1e-05 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.31 seconds.
+## Chain 1: Adjust your expectations accordingly!
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 1: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 1: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 1: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 1: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 1: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 1: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 1: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 1: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 1: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 1: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 1: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 1: 
+## Chain 1:  Elapsed Time: 0.27949 seconds (Warm-up)
+## Chain 1:                0.340356 seconds (Sampling)
+## Chain 1:                0.619846 seconds (Total)
+## Chain 1: 
+## 
+## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 2).
+## Chain 2: 
+## Chain 2: Gradient evaluation took 1.4e-05 seconds
+## Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.14 seconds.
+## Chain 2: Adjust your expectations accordingly!
+## Chain 2: 
+## Chain 2: 
+## Chain 2: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 2: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 2: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 2: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 2: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 2: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 2: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 2: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 2: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 2: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 2: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 2: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 2: 
+## Chain 2:  Elapsed Time: 0.30705 seconds (Warm-up)
+## Chain 2:                0.262812 seconds (Sampling)
+## Chain 2:                0.569862 seconds (Total)
+## Chain 2: 
+## 
+## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 3).
+## Chain 3: 
+## Chain 3: Gradient evaluation took 1.3e-05 seconds
+## Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.13 seconds.
+## Chain 3: Adjust your expectations accordingly!
+## Chain 3: 
+## Chain 3: 
+## Chain 3: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 3: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 3: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 3: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 3: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 3: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 3: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 3: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 3: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 3: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 3: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 3: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 3: 
+## Chain 3:  Elapsed Time: 0.290865 seconds (Warm-up)
+## Chain 3:                0.253149 seconds (Sampling)
+## Chain 3:                0.544014 seconds (Total)
+## Chain 3: 
+## 
+## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 4).
+## Chain 4: 
+## Chain 4: Gradient evaluation took 1.4e-05 seconds
+## Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.14 seconds.
+## Chain 4: Adjust your expectations accordingly!
+## Chain 4: 
+## Chain 4: 
+## Chain 4: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 4: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 4: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 4: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 4: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 4: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 4: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 4: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 4: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 4: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 4: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 4: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 4: 
+## Chain 4:  Elapsed Time: 0.306681 seconds (Warm-up)
+## Chain 4:                0.416756 seconds (Sampling)
+## Chain 4:                0.723437 seconds (Total)
+## Chain 4:
+```
+
+
+```r
+print(bay)
+```
+
+```
+## stan_gamm4
+##  family:       gaussian [identity]
+##  formula:      Hb ~ s(Ferritin)
+##  observations: 960
+## ------
+##               Median MAD_SD
+## (Intercept)    136.6    0.3
+## s(Ferritin).1   23.2   36.5
+## s(Ferritin).2   -4.6   45.2
+## s(Ferritin).3   15.2   16.3
+## s(Ferritin).4   16.0   47.3
+## s(Ferritin).5   12.6   43.0
+## s(Ferritin).6  -32.5   47.5
+## s(Ferritin).7   85.8   36.7
+## s(Ferritin).8 -103.6   33.0
+## s(Ferritin).9    0.5    5.5
+## 
+## Auxiliary parameter(s):
+##       Median MAD_SD
+## sigma 9.4    0.2   
+## 
+## Smoothing terms:
+##                         Median MAD_SD
+## smooth_sd[s(Ferritin)1] 50.2   16.4  
+## smooth_sd[s(Ferritin)2]  6.4    7.0  
+## 
+## ------
+## * For help interpreting the printed output see ?print.stanreg
+## * For info on the priors used see ?prior_summary.stanreg
+```
+
+
+```r
+donors_Fer_Hb <- donors_oi %>% select(Ferritin, Hb) %>% na.omit()
+donors_Fer_TfR <- donors_oi %>% select(Ferritin, TransferrinR) %>% na.omit()
+donors_Fer_Hb %>%
+  add_fitted_draws(bay, n = 50) %>%
+  ggplot(aes(x = Ferritin, y = Hb)) +
+    geom_line(aes(y = .value, group = .draw), alpha = 0.15) + 
+    geom_point(data = donors_Fer_Hb, size = 0.05) + 
+    xlim(c(0, 100)) +
+    theme_minimal()
+```
+
+<img src="fer_comment_files/figure-html/bayplot_Hb-1.png" style="display: block; margin: auto;" />
+
+### TfR ~ s(Ferritin)
+
+
+```r
+bay2 <- stan_gamm4(TransferrinR ~ s(Ferritin), data = donors_oi, seed = 100)
+```
+
+```
+## 
+## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 1).
+## Chain 1: 
+## Chain 1: Gradient evaluation took 2.2e-05 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.22 seconds.
+## Chain 1: Adjust your expectations accordingly!
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 1: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 1: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 1: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 1: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 1: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 1: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 1: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 1: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 1: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 1: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 1: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 1: 
+## Chain 1:  Elapsed Time: 0.439648 seconds (Warm-up)
+## Chain 1:                0.429555 seconds (Sampling)
+## Chain 1:                0.869203 seconds (Total)
+## Chain 1: 
+## 
+## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 2).
+## Chain 2: 
+## Chain 2: Gradient evaluation took 1.3e-05 seconds
+## Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.13 seconds.
+## Chain 2: Adjust your expectations accordingly!
+## Chain 2: 
+## Chain 2: 
+## Chain 2: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 2: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 2: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 2: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 2: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 2: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 2: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 2: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 2: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 2: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 2: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 2: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 2: 
+## Chain 2:  Elapsed Time: 0.398339 seconds (Warm-up)
+## Chain 2:                0.455305 seconds (Sampling)
+## Chain 2:                0.853644 seconds (Total)
+## Chain 2: 
+## 
+## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 3).
+## Chain 3: 
+## Chain 3: Gradient evaluation took 1.3e-05 seconds
+## Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.13 seconds.
+## Chain 3: Adjust your expectations accordingly!
+## Chain 3: 
+## Chain 3: 
+## Chain 3: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 3: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 3: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 3: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 3: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 3: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 3: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 3: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 3: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 3: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 3: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 3: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 3: 
+## Chain 3:  Elapsed Time: 0.457885 seconds (Warm-up)
+## Chain 3:                0.474553 seconds (Sampling)
+## Chain 3:                0.932438 seconds (Total)
+## Chain 3: 
+## 
+## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 4).
+## Chain 4: 
+## Chain 4: Gradient evaluation took 1.3e-05 seconds
+## Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.13 seconds.
+## Chain 4: Adjust your expectations accordingly!
+## Chain 4: 
+## Chain 4: 
+## Chain 4: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 4: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 4: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 4: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 4: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 4: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 4: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 4: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 4: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 4: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 4: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 4: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 4: 
+## Chain 4:  Elapsed Time: 0.453079 seconds (Warm-up)
+## Chain 4:                0.499095 seconds (Sampling)
+## Chain 4:                0.952174 seconds (Total)
+## Chain 4:
+```
+
+```
+## Warning: There were 3 divergent transitions after warmup. See
+## https://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup
+## to find out why this is a problem and how to eliminate them.
+```
+
+```
+## Warning: Examine the pairs() plot to diagnose sampling problems
+```
+
+
+```r
+print(bay2)
+```
+
+```
+## stan_gamm4
+##  family:       gaussian [identity]
+##  formula:      TransferrinR ~ s(Ferritin)
+##  observations: 960
+## ------
+##               Median MAD_SD
+## (Intercept)     3.5    0.0 
+## s(Ferritin).1   8.3    6.7 
+## s(Ferritin).2   8.3   12.6 
+## s(Ferritin).3  -4.7    2.4 
+## s(Ferritin).4  -7.8   13.0 
+## s(Ferritin).5  15.9    9.4 
+## s(Ferritin).6  26.4    8.7 
+## s(Ferritin).7 -40.7    4.7 
+## s(Ferritin).8  42.2    4.4 
+## s(Ferritin).9  -0.2    0.7 
+## 
+## Auxiliary parameter(s):
+##       Median MAD_SD
+## sigma 1.0    0.0   
+## 
+## Smoothing terms:
+##                         Median MAD_SD
+## smooth_sd[s(Ferritin)1] 15.4    2.4  
+## smooth_sd[s(Ferritin)2]  0.8    0.9  
+## 
+## ------
+## * For help interpreting the printed output see ?print.stanreg
+## * For info on the priors used see ?prior_summary.stanreg
+```
+
+
+```r
+donors_Fer_TfR %>%
+  add_fitted_draws(bay2, n = 50) %>%
+  ggplot(aes(x = Ferritin, y = TransferrinR)) +
+    geom_line(aes(y = .value, group = .draw), alpha = 0.15) + 
+    geom_point(data = donors_Fer_TfR, size = 0.05) + 
+    xlim(c(0, 100)) +
+    theme_minimal()
+```
+
+<img src="fer_comment_files/figure-html/bayplot_TfR-1.png" style="display: block; margin: auto;" />
+
+### Bayesian for H2000
+
+
+```r
+bay3 <- stan_gamm4(Hemoglobin ~ s(Ferritin), data = apparently_healthy, seed = 100)
+```
+
+```
+## 
+## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 1).
+## Chain 1: 
+## Chain 1: Gradient evaluation took 2.3e-05 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.23 seconds.
+## Chain 1: Adjust your expectations accordingly!
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 1: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 1: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 1: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 1: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 1: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 1: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 1: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 1: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 1: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 1: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 1: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 1: 
+## Chain 1:  Elapsed Time: 0.49638 seconds (Warm-up)
+## Chain 1:                0.745244 seconds (Sampling)
+## Chain 1:                1.24162 seconds (Total)
+## Chain 1: 
+## 
+## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 2).
+## Chain 2: 
+## Chain 2: Gradient evaluation took 1.9e-05 seconds
+## Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.19 seconds.
+## Chain 2: Adjust your expectations accordingly!
+## Chain 2: 
+## Chain 2: 
+## Chain 2: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 2: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 2: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 2: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 2: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 2: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 2: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 2: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 2: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 2: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 2: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 2: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 2: 
+## Chain 2:  Elapsed Time: 0.478192 seconds (Warm-up)
+## Chain 2:                0.619086 seconds (Sampling)
+## Chain 2:                1.09728 seconds (Total)
+## Chain 2: 
+## 
+## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 3).
+## Chain 3: 
+## Chain 3: Gradient evaluation took 1.8e-05 seconds
+## Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.18 seconds.
+## Chain 3: Adjust your expectations accordingly!
+## Chain 3: 
+## Chain 3: 
+## Chain 3: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 3: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 3: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 3: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 3: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 3: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 3: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 3: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 3: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 3: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 3: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 3: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 3: 
+## Chain 3:  Elapsed Time: 0.458262 seconds (Warm-up)
+## Chain 3:                0.582859 seconds (Sampling)
+## Chain 3:                1.04112 seconds (Total)
+## Chain 3: 
+## 
+## SAMPLING FOR MODEL 'continuous' NOW (CHAIN 4).
+## Chain 4: 
+## Chain 4: Gradient evaluation took 1.4e-05 seconds
+## Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.14 seconds.
+## Chain 4: Adjust your expectations accordingly!
+## Chain 4: 
+## Chain 4: 
+## Chain 4: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 4: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 4: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 4: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 4: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 4: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 4: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 4: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 4: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 4: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 4: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 4: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 4: 
+## Chain 4:  Elapsed Time: 0.446454 seconds (Warm-up)
+## Chain 4:                0.467703 seconds (Sampling)
+## Chain 4:                0.914157 seconds (Total)
+## Chain 4:
+```
+
+```
+## Warning: There were 1 divergent transitions after warmup. See
+## https://mc-stan.org/misc/warnings.html#divergent-transitions-after-warmup
+## to find out why this is a problem and how to eliminate them.
+```
+
+```
+## Warning: Examine the pairs() plot to diagnose sampling problems
+```
+
+
+```r
+print(bay3)
+```
+
+```
+## stan_gamm4
+##  family:       gaussian [identity]
+##  formula:      Hemoglobin ~ s(Ferritin)
+##  observations: 1160
+## ------
+##               Median MAD_SD
+## (Intercept)    133.9    0.3
+## s(Ferritin).1  -27.1   74.4
+## s(Ferritin).2 -107.6   36.4
+## s(Ferritin).3   44.0   85.2
+## s(Ferritin).4  224.5  108.4
+## s(Ferritin).5  -21.7   13.2
+## s(Ferritin).6  168.1   66.3
+## s(Ferritin).7  224.9   40.0
+## s(Ferritin).8 -169.1   31.7
+## s(Ferritin).9    3.4    9.4
+## 
+## Auxiliary parameter(s):
+##       Median MAD_SD
+## sigma 11.0    0.2  
+## 
+## Smoothing terms:
+##                         Median MAD_SD
+## smooth_sd[s(Ferritin)1] 109.3   26.0 
+## smooth_sd[s(Ferritin)2]  10.4   11.3 
+## 
+## ------
+## * For help interpreting the printed output see ?print.stanreg
+## * For info on the priors used see ?prior_summary.stanreg
+```
+
+
+
+```r
+na.omit(apparently_healthy) %>%
+  add_fitted_draws(bay3, n = 50) %>%
+  ggplot(aes(x = Ferritin, y = Hemoglobin)) +
+    geom_line(aes(y = .value, group = .draw), alpha = 0.15) + 
+    geom_point(data = apparently_healthy, size = 0.05) + 
+    xlim(c(0, 100)) +
+    theme_minimal()
+```
+
+<img src="fer_comment_files/figure-html/bayplot_h2000-1.png" style="display: block; margin: auto;" />
+
 # References
 1. World Health Organization. (2020). WHO guideline on use of ferritin concentrations to assess iron status in populations. World Health Organization. ISBN: 978-92-4-000012-4
 2. Mei Z, Addo OY, Jefferds ME, Sharma AJ, Flores-Ayala RC, Brittenham GM. Physiologically based serum ferritin thresholds for iron deficiency in children and non-pregnant women: a US National Health and Nutrition Examination Surveys (NHANES) serial cross-sectional study. The Lancet Haematology. 2021;8(8):e572-e582. doi:10.1016/S2352-3026(21)00168-X

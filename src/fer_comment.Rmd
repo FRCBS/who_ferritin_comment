@@ -10,10 +10,12 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(tidybayes)
 library(rms)
 library(mgcv)
-library(lspline)
-library(AICcmodavg)
+library(rstanarm)
+library(bayestestR)
+library(bayesplot)
 source("~/CRP_enrichment/src/funcs.R") # load our helper functions
 ```
 
@@ -91,7 +93,8 @@ FinDonor <- left_join(donors, findonor, by = "donor")
 # Filter
 donors_oi <- FinDonor %>%
     filter(age >= 20 & age <= 49) %>%
-    filter(gender == "Women")
+    filter(gender == "Women") %>%
+    select(Hb, Ferritin, TransferrinR)
 ```
 
 ```{r plot_data, warning = FALSE, echo = FALSE, fig.align = "center"}
@@ -492,7 +495,7 @@ p10_donors_TfR <- ggplot(Predict(rcs10_donors_TfR)) +
     annotate(geom = "text", label = paste("AIC:", as.integer(AIC(rcs10_donors_TfR))), x = 110, y = 6) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), limits = c(0, 120)) +
     theme_minimal() + 
-    labs(title = "Restricted cubic spline, 7 knots",
+    labs(title = "Restricted cubic spline, 10´ knots",
          subtitle = "Donating women 20-49 y.o.",
          x = "Serum ferritin concentrations (μg/L)",
          y = "TfR (mg/L)")
@@ -513,6 +516,71 @@ multiplot(p3_donors_TfR, p4_donors_TfR, p5_donors_TfR, p6_donors_TfR, p7_donors_
 compare_AIC(2661, 2664)
 ```
 --> Not enough evidence to choose between RCS7-RCS11, but we might be able to still credibly drop RCS11.
+
+## Now make it Bayesian
+
+### Hb ~ s(Ferritin)
+
+```{r bayesian_fit}
+bay <- stan_gamm4(Hb ~ s(Ferritin), data = donors_oi, seed = 100)
+```
+
+```{r print_bayes}
+print(bay)
+```
+
+```{r bayplot_Hb, fig.align = "center", warning = FALSE}
+donors_Fer_Hb <- donors_oi %>% select(Ferritin, Hb) %>% na.omit()
+donors_Fer_TfR <- donors_oi %>% select(Ferritin, TransferrinR) %>% na.omit()
+donors_Fer_Hb %>%
+  add_fitted_draws(bay, n = 50) %>%
+  ggplot(aes(x = Ferritin, y = Hb)) +
+    geom_line(aes(y = .value, group = .draw), alpha = 0.15) + 
+    geom_point(data = donors_Fer_Hb, size = 0.05) + 
+    xlim(c(0, 100)) +
+    theme_minimal()
+```
+
+### TfR ~ s(Ferritin)
+
+```{r bayesian_fit2}
+bay2 <- stan_gamm4(TransferrinR ~ s(Ferritin), data = donors_oi, seed = 100)
+```
+
+```{r print_bayes2}
+print(bay2)
+```
+
+```{r bayplot_TfR, fig.align = "center", warning = FALSE}
+donors_Fer_TfR %>%
+  add_fitted_draws(bay2, n = 50) %>%
+  ggplot(aes(x = Ferritin, y = TransferrinR)) +
+    geom_line(aes(y = .value, group = .draw), alpha = 0.15) + 
+    geom_point(data = donors_Fer_TfR, size = 0.05) + 
+    xlim(c(0, 100)) +
+    theme_minimal()
+```
+
+### Bayesian for H2000
+
+```{r bayesian_fit_h2000}
+bay3 <- stan_gamm4(Hemoglobin ~ s(Ferritin), data = apparently_healthy, seed = 100)
+```
+
+```{r print_bayes3}
+print(bay3)
+```
+
+
+```{r bayplot_h2000, fig.align = "center", warning = FALSE}
+na.omit(apparently_healthy) %>%
+  add_fitted_draws(bay3, n = 50) %>%
+  ggplot(aes(x = Ferritin, y = Hemoglobin)) +
+    geom_line(aes(y = .value, group = .draw), alpha = 0.15) + 
+    geom_point(data = apparently_healthy, size = 0.05) + 
+    xlim(c(0, 100)) +
+    theme_minimal()
+```
 
 # References
 1. World Health Organization. (2020). WHO guideline on use of ferritin concentrations to assess iron status in populations. World Health Organization. ISBN: 978-92-4-000012-4
