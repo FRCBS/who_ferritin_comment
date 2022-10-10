@@ -1,0 +1,372 @@
+---
+title: "Ferritin threshold"
+author: "Esa Turkulainen"
+date: "2022-10-10"
+output: 
+    html_document:
+        keep_md: yes
+---
+
+```{r libraries, message=FALSE}
+library(tidyverse)
+library(rms)
+```
+
+```{r define_multiplot, echo = FALSE}
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+    # http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
+    # Multiple plot function
+    #
+    # ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
+    # - cols:   Number of columns in layout
+    # - layout: A matrix specifying the layout. If present, 'cols' is ignored.
+    #
+    # If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
+    # then plot 1 will go in the upper left, 2 will go in the upper right, and
+    # 3 will go all the way across the bottom.
+    #
+
+    library(grid)
+
+    # Make a list from the ... arguments and plotlist
+    plots <- c(list(...), plotlist)
+
+    numPlots = length(plots)
+
+    # If layout is NULL, then use 'cols' to determine layout
+    if (is.null(layout)) {
+        # Make the panel
+        # ncol: Number of columns of plots
+        # nrow: Number of rows needed, calculated from # of cols
+        layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                         ncol = cols, nrow = ceiling(numPlots/cols))
+    }
+
+    if (numPlots==1) {
+        print(plots[[1]])
+    } else {
+        # Set up the page
+        grid.newpage()
+        pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+        # Make each plot, in the correct location
+        for (i in 1:numPlots) {
+            # Get the i,j matrix positions of the regions that contain this subplot
+            matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+        print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                        layout.pos.col = matchidx$col))
+        }
+    }
+}
+```
+
+```{r load_data}
+# This Rmd assumes the following naming conventions:
+# df: dataframe containing ferritin, haemoglobin, and sTfR values
+# Ferritin: ferritin column name
+# Haemoglobin: haemoglobin column name
+# sTfR: soluble transferritin receptor column name
+
+```
+
+```{r set_datadist, echo = FALSE}
+dd <- datadist(df)
+options(datadist = "dd")
+```
+
+# Haemoglobin
+## Fit RCS with varying number of knots
+
+```{r hb_fits}
+hb3 <- ols(Haemoglobin ~ rcs(Ferritin, 3), 
+           data = df, 
+           x = TRUE, 
+           y = TRUE)
+hb4 <- ols(Haemoglobin ~ rcs(Ferritin, 4), 
+           data = df, 
+           x = TRUE, 
+           y = TRUE)
+hb5 <- ols(Haemoglobin ~ rcs(Ferritin, 5), 
+           data = df, 
+           x = TRUE, 
+           y = TRUE)
+hb6 <- ols(Haemoglobin ~ rcs(Ferritin, 6), 
+           data = df, 
+           x = TRUE, 
+           y = TRUE)
+hb7 <- ols(Haemoglobin ~ rcs(Ferritin, 7), 
+           data = df, 
+           x = TRUE, 
+           y = TRUE)
+hb8 <- ols(Haemoglobin ~ rcs(Ferritin, 8), 
+           data = df, 
+           x = TRUE, 
+           y = TRUE)
+hb9 <- ols(Haemoglobin ~ rcs(Ferritin, 9), 
+           data = df, 
+           x = TRUE, 
+           y = TRUE)
+hb10 <- ols(Haemoglobin ~ rcs(Ferritin, 10), 
+            data = df, 
+            x = TRUE, 
+            y = TRUE)
+hb11 <- ols(Haemoglobin ~ rcs(Ferritin, 11), 
+            data = df, 
+            x = TRUE, 
+            y = TRUE)
+hb12 <- ols(Haemoglobin ~ rcs(Ferritin, 12), 
+            data = df, 
+            x = TRUE, 
+            y = TRUE)
+```
+
+```{r hb_compare_AIC, warning = FALSE, fig.align = "center"}
+Hb_AIC <- c(AIC(hb3),
+            AIC(hb4), 
+            AIC(hb5), 
+            AIC(hb6), 
+            AIC(hb7), 
+            AIC(hb8), 
+            AIC(hb9), 
+            AIC(hb10), 
+            AIC(hb11), 
+            AIC(hb12))
+
+Hb_AIC_min <- min(Hb_AIC)
+
+Hb_AIC_mindiff <- Hb_AIC - Hb_AIC_min
+
+knots <- 3:12
+
+hb_AIC_df <- data.frame(knots = knots,
+                        AIC_delta = Hb_AIC_mindiff)
+
+ggplot(data = hb_AIC_df, aes(x = knots, 
+                             y = AIC_delta)) +
+    geom_point() +
+    geom_hline(yintercept = 2, 
+               linetype = "dashed", 
+               color = "red") +
+    geom_hline(yintercept = 4, 
+               linetype = "dashed", 
+               color = "orange") +
+    geom_hline(yintercept = 7, 
+               linetype = "dashed", 
+               color = "yellow") +
+    labs(title = "RCS model selection using AIC",
+         subtitle = "Haemoglobin ~ Ferritin",
+         x = "Number of knots in an RCS model",
+         y = bquote(Delta[i] ~ " = " ~ AIC[min] ~ " - " ~ AIC[i])) +
+    scale_x_continuous(breaks = c(3, 4, 5, 6, 7, 8, 9, 10, 11, 12)) +
+    scale_y_continuous(breaks = c(2, 4, 7, as.integer(max(Hb_AIC_mindiff)))) +
+    annotate(geom = "text", 
+             label = bquote(Delta[i] ~ "< 2: substantial support"), 
+             x = -Inf,
+             y = Inf,
+             hjust = -1.2,
+             vjust = 1) +
+    annotate(geom = "text", 
+             label = bquote("2 <" ~ Delta[i] ~ "< 4: strong support"), 
+             x = -Inf,
+             y = Inf,
+             hjust = -1.22,
+             vjust = 2) +
+    annotate(geom = "text", 
+             label = bquote("4 <" ~ Delta[i] ~ "< 7: little support"), 
+             x = -Inf,
+             y = Inf,
+             hjust = -1.34,
+             vjust = 3) +
+    theme_minimal()
+
+```
+
+```{r hb_plot_fits, fig.align = "center"}
+# You may choose to plot, for example, all those model fits that have delta < 2.
+hb_p1 <- ggplot(Predict(FIT_OBJ)) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
+                       limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "Haemoglobin concentration (g/L)")
+
+hb_p2 <- ggplot(Predict(FIT_OBJ)) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
+                       limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "Haemoglobin concentration (g/L)")
+
+hb_p3 <- ggplot(Predict(FIT_OBJ)) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
+                       limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "Haemoglobin concentration (g/L)")
+
+hb_p4 <- ggplot(Predict(FIT_OBJ)) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
+                       limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "Haemoglobin concentration (g/L)")
+
+multiplot(hb_p1, hb_p2, hb_p3, hb_p4, cols = 2)
+```
+
+# sTfR
+## Fit RCS with varying number of knots
+
+```{r stfr_fits}
+stfr3 <- ols(sTfR ~ rcs(Ferritin, 3), 
+           data = df, 
+           x = TRUE, 
+           y = TRUE)
+stfr4 <- ols(sTfR ~ rcs(Ferritin, 4), 
+           data = df, 
+           x = TRUE, 
+           y = TRUE)
+stfr5 <- ols(sTfR ~ rcs(Ferritin, 5), 
+           data = df, 
+           x = TRUE, 
+           y = TRUE)
+stfr6 <- ols(sTfR ~ rcs(Ferritin, 6), 
+           data = df, 
+           x = TRUE, 
+           y = TRUE)
+stfr7 <- ols(sTfR ~ rcs(Ferritin, 7), 
+           data = df, 
+           x = TRUE, 
+           y = TRUE)
+stfr8 <- ols(sTfR ~ rcs(Ferritin, 8), 
+           data = df, 
+           x = TRUE, 
+           y = TRUE)
+stfr9 <- ols(sTfR ~ rcs(Ferritin, 9), 
+           data = df, 
+           x = TRUE, 
+           y = TRUE)
+stfr10 <- ols(sTfR ~ rcs(Ferritin, 10), 
+            data = df, 
+            x = TRUE, 
+            y = TRUE)
+stfr11 <- ols(sTfR ~ rcs(Ferritin, 11), 
+            data = df, 
+            x = TRUE, 
+            y = TRUE)
+stfr12 <- ols(sTfR ~ rcs(Ferritin, 12), 
+            data = df, 
+            x = TRUE, 
+            y = TRUE)
+```
+
+```{r stfr_compare_AIC, warning = FALSE, fig.align = "center"}
+stfr_AIC <- c(AIC(stfr3),
+              AIC(stfr4), 
+              AIC(stfr5), 
+              AIC(stfr6), 
+              AIC(stfr7), 
+              AIC(stfr8), 
+              AIC(stfr9), 
+              AIC(stfr10), 
+              AIC(stfr11), 
+              AIC(stfr12))
+
+stfr_AIC_min <- min(stfr_AIC)
+
+stfr_AIC_mindiff <- stfr_AIC - stfr_AIC_min
+
+knots <- 3:12
+
+stfr_AIC_df <- data.frame(knots = knots,
+                          AIC_delta = stfr_AIC_mindiff)
+
+ggplot(data = stfr_AIC_df, aes(x = knots,
+                               y = AIC_delta)) +
+    geom_point() +
+    geom_hline(yintercept = 2, 
+               linetype = "dashed", 
+               color = "red") +
+    geom_hline(yintercept = 4, 
+               linetype = "dashed", 
+               color = "orange") +
+    geom_hline(yintercept = 7, 
+               linetype = "dashed", 
+               color = "yellow") +
+    labs(title = "RCS model selection using AIC",
+         subtitle = "sTfR ~ Ferritin",
+         x = "Number of knots in an RCS model",
+         y = bquote(Delta[i] ~ " = " ~ AIC[min] ~ " - " ~ AIC[i])) +
+    scale_x_continuous(breaks = c(3, 4, 5, 6, 7, 8, 9, 10, 11, 12)) +
+    scale_y_continuous(breaks = c(2, 4, 7, as.integer(max(stfr_AIC_mindiff)))) +
+    annotate(geom = "text",
+             label = bquote(Delta[i] ~ "< 2: substantial support"),
+             x = -Inf,
+             y = Inf,
+             hjust = -1.2,
+             vjust = 1) +
+    annotate(geom = "text",
+             label = bquote("2 <" ~ Delta[i] ~ "< 4: strong support"),
+             x = -Inf,
+             y = Inf,
+             hjust = -1.22,
+             vjust = 2) +
+    annotate(geom = "text",
+             label = bquote("4 <" ~ Delta[i] ~ "< 7: little support"),
+             x = -Inf,
+             y = Inf,
+             hjust = -1.34,
+             vjust = 3) +
+    theme_minimal()
+
+```
+
+```{r stfr_plot_fits, fig.align = "center"}
+# You may choose to plot, for example, all those model fits that have delta < 2.
+stfr_p1 <- ggplot(Predict(FIT_OBJ)) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
+                       limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "sTfR concentrations (mg/L)")
+
+stfr_p2 <- ggplot(Predict(FIT_OBJ)) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
+                       limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "sTfR concentrations (mg/L)")
+
+stfr_p3 <- ggplot(Predict(FIT_OBJ)) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
+                       limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "sTfR concentrations (mg/L)")
+
+stfr_p4 <- ggplot(Predict(FIT_OBJ)) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
+                       limits = c(0, 120)) +
+    theme_minimal() + 
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "sTfR concentrations (mg/L)")
+
+multiplot(stfr_p1, stfr_p2, stfr_p3, stfr_p4, cols = 2)
+```
