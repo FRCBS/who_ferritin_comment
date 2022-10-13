@@ -4,6 +4,7 @@ author: "Esa Turkulainen"
 toc: true
 format: 
     html:
+        self-contained: true
         code-tools: true
         code-link: true
 theme: cosmo
