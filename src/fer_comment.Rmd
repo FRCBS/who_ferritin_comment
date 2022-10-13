@@ -7,16 +7,21 @@ output:
         keep_md: yes
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, message = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(tidyverse)
 library(tidybayes)
 library(rms)
+library(segmented)
+library(mcp)
+library(rmsb)
 library(mgcv)
 library(rstanarm)
 library(bayestestR)
 library(bayesplot)
+library(tidyverse)
 source("~/CRP_enrichment/src/funcs.R") # load our helper functions
+
+options(mc.cores = parallel::detectCores()) 
 ```
 
 # Intro
@@ -517,69 +522,55 @@ compare_AIC(2661, 2664)
 ```
 --> Not enough evidence to choose between RCS7-RCS11, but we might be able to still credibly drop RCS11.
 
-## Now make it Bayesian
+## Breakpoint analysis
 
-### Hb ~ s(Ferritin)
+Let's use piecewise linear regression to estimate a breakpoint. We'll do it by using two different packages: `segmented` and `mcp`.
 
-```{r bayesian_fit}
-bay <- stan_gamm4(Hb ~ s(Ferritin), data = donors_oi, seed = 100)
+### Using `segmented`
+
+```{r breakpoint_analysis}
+# Create first a linear model
+h2000_lm <- lm(Hemoglobin ~ Ferritin, data = apparently_healthy)
+# Then estimate 
+segfit <- segmented(h2000_lm)
+# Summarize
+summary(segfit)
+```
+As "feared", the breakpoint is very low. Let's plot it.
+
+```{r segmented_plot, warning = FALSE, echo = FALSE}
+model <- data.frame(Ferritin = na.omit(apparently_healthy)$Ferritin, Hemoglobin = fitted(segfit))
+
+ggplot(data = apparently_healthy, aes(x = Ferritin, y = Hemoglobin)) +
+    geom_point() +
+    theme_minimal() +
+    geom_line(data = model, aes(x = Ferritin, y = Hemoglobin), colour = "red", size = 1.4) +
+    scale_x_continuous(limits = c(0, 100))
 ```
 
-```{r print_bayes}
-print(bay)
+## Using `mcp`
+
+```{r mcp_fit}
+# Specify model
+model_spec <- list(Hemoglobin ~ Ferritin,
+                   ~ 0 + Ferritin)
+
+mcp_fit <- mcp(model_spec, 
+               data = na.omit(apparently_healthy))
 ```
 
-```{r bayplot_Hb, fig.align = "center", warning = FALSE}
-donors_Fer_Hb <- donors_oi %>% select(Ferritin, Hb) %>% na.omit()
-donors_Fer_TfR <- donors_oi %>% select(Ferritin, TransferrinR) %>% na.omit()
-donors_Fer_Hb %>%
-  add_fitted_draws(bay, n = 50) %>%
-  ggplot(aes(x = Ferritin, y = Hb)) +
-    geom_line(aes(y = .value, group = .draw), alpha = 0.15) + 
-    geom_point(data = donors_Fer_Hb, size = 0.05) + 
-    xlim(c(0, 100)) +
-    theme_minimal()
+```{r mcp_summary}
+summary(mcp_fit)
 ```
 
-### TfR ~ s(Ferritin)
-
-```{r bayesian_fit2}
-bay2 <- stan_gamm4(TransferrinR ~ s(Ferritin), data = donors_oi, seed = 100)
+```{r mcp_plot, warning = FALSE, message = FALSE}
+plot(mcp_fit) +
+    theme_minimal() +
+    coord_cartesian(xlim = c(0, 100)) 
 ```
 
-```{r print_bayes2}
-print(bay2)
-```
-
-```{r bayplot_TfR, fig.align = "center", warning = FALSE}
-donors_Fer_TfR %>%
-  add_fitted_draws(bay2, n = 50) %>%
-  ggplot(aes(x = Ferritin, y = TransferrinR)) +
-    geom_line(aes(y = .value, group = .draw), alpha = 0.15) + 
-    geom_point(data = donors_Fer_TfR, size = 0.05) + 
-    xlim(c(0, 100)) +
-    theme_minimal()
-```
-
-### Bayesian for H2000
-
-```{r bayesian_fit_h2000}
-bay3 <- stan_gamm4(Hemoglobin ~ s(Ferritin), data = apparently_healthy, seed = 100)
-```
-
-```{r print_bayes3}
-print(bay3)
-```
-
-
-```{r bayplot_h2000, fig.align = "center", warning = FALSE}
-na.omit(apparently_healthy) %>%
-  add_fitted_draws(bay3, n = 50) %>%
-  ggplot(aes(x = Ferritin, y = Hemoglobin)) +
-    geom_line(aes(y = .value, group = .draw), alpha = 0.15) + 
-    geom_point(data = apparently_healthy, size = 0.05) + 
-    xlim(c(0, 100)) +
-    theme_minimal()
+```{r mcp_checks}
+plot_pars(mcp_fit, regex_pars = "cp_")
 ```
 
 # References
