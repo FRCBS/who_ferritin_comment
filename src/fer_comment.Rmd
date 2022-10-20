@@ -522,13 +522,13 @@ compare_AIC(2661, 2664)
 ```
 --> Not enough evidence to choose between RCS7-RCS11, but we might be able to still credibly drop RCS11.
 
-## Breakpoint analysis
+## Breakpoint analysis | H2000
 
 Let's use piecewise linear regression to estimate a breakpoint. We'll do it by using two different packages: `segmented` and `mcp`.
 
-### Using `segmented`
+### Using `segmented` 
 
-```{r breakpoint_analysis}
+```{r breakpoint_analysis_segmented_h2000}
 # Create first a linear model
 h2000_lm <- lm(Hemoglobin ~ Ferritin, data = apparently_healthy)
 # Then estimate 
@@ -550,13 +550,17 @@ ggplot(data = apparently_healthy, aes(x = Ferritin, y = Hemoglobin)) +
 
 ## Using `mcp`
 
-```{r mcp_fit}
+```{r mcp_fit, cache = TRUE}
 # Specify model
 model_spec <- list(Hemoglobin ~ Ferritin,
                    ~ 0 + Ferritin)
 
 mcp_fit <- mcp(model_spec, 
-               data = na.omit(apparently_healthy))
+               data = na.omit(apparently_healthy),
+               adapt = 3000,
+               iter = 50000,
+               chains = 4,
+               cores = 4)
 ```
 
 ```{r mcp_summary}
@@ -571,6 +575,80 @@ plot(mcp_fit) +
 
 ```{r mcp_checks}
 plot_pars(mcp_fit, regex_pars = "cp_")
+```
+
+## Breakpoint analysis | FinDonor
+
+```{r breakpoint_analysis_segmented_FinDonor}
+# Create first a linear model
+Findonor_haem_lm <- lm(Hb ~ Ferritin, data = donors_oi)
+Findonor_stfr_lm <- lm(TransferrinR ~ Ferritin, data = donors_oi)
+# Then estimate 
+segfit_fd_haem <- segmented(Findonor_haem_lm)
+segfit_fd_stfr <- segmented(Findonor_stfr_lm)
+# Summarize
+summary(segfit_fd_haem)
+summary(segfit_fd_stfr)
+```
+```{r segmented_plot_findonor, warning = FALSE, echo = FALSE}
+model_fd_haem <- data.frame(Ferritin = na.omit(donors_oi)$Ferritin, Hb = fitted(segfit_fd_haem))
+model_fd_stfr <- data.frame(Ferritin = na.omit(donors_oi)$Ferritin, TransferrinR = fitted(segfit_fd_stfr))
+
+ggplot(data = donors_oi, aes(x = Ferritin, y = Hb)) +
+    geom_point() +
+    theme_minimal() +
+    geom_line(data = model_fd_haem, aes(x = Ferritin, y = Hb), colour = "red", size = 1.4) +
+    scale_x_continuous(limits = c(0, 100))
+
+ggplot(data = donors_oi, aes(x = Ferritin, y = TransferrinR)) +
+    geom_point() +
+    theme_minimal() +
+    geom_line(data = model_fd_stfr, aes(x = Ferritin, y = TransferrinR), colour = "red", size = 1.4) +
+    scale_x_continuous(limits = c(0, 100))
+
+
+```
+## Using `mcp` | FinDonor
+
+```{r mcp_fit_findonor, cache = TRUE}
+# Specify model
+model_spec_haem <- list(Hb ~ Ferritin,
+                   ~ 0 + Ferritin)
+model_spec_stfr <- list(TransferrinR ~ Ferritin,
+                   ~ 0 + Ferritin)
+
+mcp_fit_haem <- mcp(model_spec_haem, 
+               data = na.omit(donors_oi),
+               adapt = 3000,
+               iter = 50000,
+               chains = 4,
+               cores = 4)
+mcp_fit_stfr <- mcp(model_spec_stfr, 
+               data = na.omit(donors_oi),
+               adapt = 3000,
+               iter = 50000,
+               chains = 4,
+               cores = 4)
+```
+
+```{r mcp_summary_findonor}
+summary(mcp_fit_haem)
+summary(mcp_fit_stfr)
+```
+
+```{r mcp_plot_findonor, warning = FALSE, message = FALSE}
+plot(mcp_fit_haem) +
+    theme_minimal() +
+    coord_cartesian(xlim = c(0, 100)) 
+
+plot(mcp_fit_stfr) +
+    theme_minimal() +
+    coord_cartesian(xlim = c(0, 100)) 
+```
+
+```{r mcp_checks_findonor}
+plot_pars(mcp_fit_haem, regex_pars = "cp_")
+plot_pars(mcp_fit_stfr, regex_pars = "cp_")
 ```
 
 # References
