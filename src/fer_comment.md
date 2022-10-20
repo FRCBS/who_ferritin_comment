@@ -160,11 +160,11 @@ compare_AIC(2661, 2664)
 ```
 --> Not enough evidence to choose between RCS7-RCS11, but we might be able to still credibly drop RCS11.
 
-## Breakpoint analysis
+## Breakpoint analysis | H2000
 
 Let's use piecewise linear regression to estimate a breakpoint. We'll do it by using two different packages: `segmented` and `mcp`.
 
-### Using `segmented`
+### Using `segmented` 
 
 
 ```r
@@ -214,7 +214,11 @@ model_spec <- list(Hemoglobin ~ Ferritin,
                    ~ 0 + Ferritin)
 
 mcp_fit <- mcp(model_spec, 
-               data = na.omit(apparently_healthy))
+               data = na.omit(apparently_healthy),
+               adapt = 3000,
+               iter = 50000,
+               chains = 4,
+               cores = 4)
 ```
 
 ```
@@ -236,7 +240,7 @@ mcp_fit <- mcp(model_spec,
 ```
 
 ```
-## Finished sampling in 34.8 seconds
+## Finished sampling in 403.4 seconds
 ```
 
 
@@ -246,18 +250,18 @@ summary(mcp_fit)
 
 ```
 ## Family: gaussian(link = 'identity')
-## Iterations: 9000 from 3 chains.
+## Iterations: 200000 from 4 chains.
 ## Segments:
 ##   1: Hemoglobin ~ Ferritin
 ##   2: Hemoglobin ~ 1 ~ 0 + Ferritin
 ## 
 ## Population-level parameters:
-##        name   mean  lower   upper Rhat n.eff
-##        cp_1  7.809  6.712   9.950  2.1    13
-##  Ferritin_1  5.139  2.635   7.024  1.0  1873
-##  Ferritin_2  0.031  0.013   0.051  1.8    61
-##       int_1 95.405 85.314 108.397  2.1    15
-##     sigma_1 10.635 10.222  11.091  1.0  5767
+##        name   mean  lower   upper Rhat  n.eff
+##        cp_1  7.381  6.687   8.128    1    225
+##  Ferritin_1  5.760  4.137   7.416    1  49486
+##  Ferritin_2  0.033  0.014   0.051    1    610
+##       int_1 92.115 83.428 100.938    1    291
+##     sigma_1 10.621 10.192  11.059    1 122825
 ```
 
 
@@ -275,6 +279,190 @@ plot_pars(mcp_fit, regex_pars = "cp_")
 ```
 
 ![](fer_comment_files/figure-html/mcp_checks-1.png)<!-- -->
+
+## Breakpoint analysis | FinDonor
+
+
+```r
+# Create first a linear model
+Findonor_haem_lm <- lm(Hb ~ Ferritin, data = donors_oi)
+Findonor_stfr_lm <- lm(TransferrinR ~ Ferritin, data = donors_oi)
+# Then estimate 
+segfit_fd_haem <- segmented(Findonor_haem_lm)
+segfit_fd_stfr <- segmented(Findonor_stfr_lm)
+# Summarize
+summary(segfit_fd_haem)
+```
+
+```
+## 
+## 	***Regression Model with Segmented Relationship(s)***
+## 
+## Call: 
+## segmented.lm(obj = Findonor_haem_lm)
+## 
+## Estimated Break-Point(s):
+##                  Est. St.Err
+## psi1.Ferritin 20.329  1.927
+## 
+## Meaningful coefficients of the linear terms:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) 124.8733     1.7081  73.108  < 2e-16 ***
+## Ferritin      0.6240     0.1232   5.063 4.95e-07 ***
+## U1.Ferritin  -0.5853     0.1240  -4.720       NA    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 9.327 on 956 degrees of freedom
+## Multiple R-Squared: 0.09782,  Adjusted R-squared: 0.09498 
+## 
+## Boot restarting based on 6 samples. Last fit:
+## Convergence attained in 6 iterations (rel. change 1.8582e-13)
+```
+
+```r
+summary(segfit_fd_stfr)
+```
+
+```
+## 
+## 	***Regression Model with Segmented Relationship(s)***
+## 
+## Call: 
+## segmented.lm(obj = Findonor_stfr_lm)
+## 
+## Estimated Break-Point(s):
+##                  Est. St.Err
+## psi1.Ferritin 16.615  0.573
+## 
+## Meaningful coefficients of the linear terms:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)  7.18730    0.22853   31.45   <2e-16 ***
+## Ferritin    -0.23235    0.01926  -12.06   <2e-16 ***
+## U1.Ferritin  0.22480    0.01931   11.64       NA    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.9861 on 956 degrees of freedom
+## Multiple R-Squared: 0.3581,  Adjusted R-squared: 0.3561 
+## 
+## Boot restarting based on 6 samples. Last fit:
+## Convergence attained in 2 iterations (rel. change 4.5476e-13)
+```
+![](fer_comment_files/figure-html/segmented_plot_findonor-1.png)<!-- -->![](fer_comment_files/figure-html/segmented_plot_findonor-2.png)<!-- -->
+## Using `mcp` | FinDonor
+
+
+```r
+# Specify model
+model_spec_haem <- list(Hb ~ Ferritin,
+                   ~ 0 + Ferritin)
+model_spec_stfr <- list(TransferrinR ~ Ferritin,
+                   ~ 0 + Ferritin)
+
+mcp_fit_haem <- mcp(model_spec_haem, 
+               data = na.omit(donors_oi),
+               adapt = 3000,
+               iter = 50000,
+               chains = 4,
+               cores = 4)
+```
+
+```
+## Parallel sampling in progress...
+```
+
+```
+## Finished sampling in 176 seconds
+```
+
+```r
+mcp_fit_stfr <- mcp(model_spec_stfr, 
+               data = na.omit(donors_oi),
+               adapt = 3000,
+               iter = 50000,
+               chains = 4,
+               cores = 4)
+```
+
+```
+## Parallel sampling in progress...
+```
+
+```
+## Finished sampling in 177.5 seconds
+```
+
+
+```r
+summary(mcp_fit_haem)
+```
+
+```
+## Family: gaussian(link = 'identity')
+## Iterations: 200000 from 4 chains.
+## Segments:
+##   1: Hb ~ Ferritin
+##   2: Hb ~ 1 ~ 0 + Ferritin
+## 
+## Population-level parameters:
+##        name    mean    lower   upper Rhat  n.eff
+##        cp_1  26.734  16.6120  40.366    1    515
+##  Ferritin_1   0.450   0.1803   0.783    1   4880
+##  Ferritin_2   0.026  -0.0053   0.057    1    741
+##       int_1 127.308 122.7370 131.379    1    602
+##     sigma_1   9.350   8.9359   9.776    1 115775
+```
+
+```r
+summary(mcp_fit_stfr)
+```
+
+```
+## Family: gaussian(link = 'identity')
+## Iterations: 200000 from 4 chains.
+## Segments:
+##   1: TransferrinR ~ Ferritin
+##   2: TransferrinR ~ 1 ~ 0 + Ferritin
+## 
+## Population-level parameters:
+##        name    mean   lower   upper Rhat  n.eff
+##        cp_1 17.4257 15.0113 19.7661    1    364
+##  Ferritin_1 -0.2141 -0.2739 -0.1584    1   9526
+##  Ferritin_2 -0.0066 -0.0096 -0.0036    1    573
+##       int_1  6.9878  6.4063  7.6140    1    450
+##     sigma_1  0.9875  0.9436  1.0325    1 117039
+```
+
+
+```r
+plot(mcp_fit_haem) +
+    theme_minimal() +
+    coord_cartesian(xlim = c(0, 100)) 
+```
+
+![](fer_comment_files/figure-html/mcp_plot_findonor-1.png)<!-- -->
+
+```r
+plot(mcp_fit_stfr) +
+    theme_minimal() +
+    coord_cartesian(xlim = c(0, 100)) 
+```
+
+![](fer_comment_files/figure-html/mcp_plot_findonor-2.png)<!-- -->
+
+
+```r
+plot_pars(mcp_fit_haem, regex_pars = "cp_")
+```
+
+![](fer_comment_files/figure-html/mcp_checks_findonor-1.png)<!-- -->
+
+```r
+plot_pars(mcp_fit_stfr, regex_pars = "cp_")
+```
+
+![](fer_comment_files/figure-html/mcp_checks_findonor-2.png)<!-- -->
 
 # References
 1. World Health Organization. (2020). WHO guideline on use of ferritin concentrations to assess iron status in populations. World Health Organization. ISBN: 978-92-4-000012-4
