@@ -10,6 +10,7 @@ output:
 ```{r libraries, message=FALSE}
 library(tidyverse)
 library(rms)
+library(mcp)
 ```
 
 ```{r define_multiplot, echo = FALSE}
@@ -62,23 +63,56 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 ```
 
 ```{r load_data}
-# This Rmd assumes the following naming conventions:
+# This Rmd assumes the following naming conventions, but you may refactor as you please:
 # df: dataframe containing ferritin, haemoglobin, and sTfR values
 # Ferritin: ferritin column name
 # Haemoglobin: haemoglobin column name
 # sTfR: soluble transferritin receptor column name
 
+#data <- load("~/stuff.Rdata") # or any other method
+
+# Filter if necessary
+
+# Select and rename
+# df <- data %>% 
+#     select(YourFerritinColumnName, YourHbColumnName, YourStfrColumnName) %>% 
+#     rename(Ferritin = YourFerritinColumnName, Haemoglobin = YourHbColumnName, sTfR = YourStfrColumnName)
+
+# Load data on individual donations
+load("~/CRP_enrichment/data/r02.fd.bd.all.rdata") # outputs an object called "output" into the environment
+donations <- output
+
+# We only want to look at first donation event values from each donor
+donors <- donations %>%
+    group_by(donor) %>%
+    filter(date == min(date)) %>%
+    ungroup()
+
+# Load FinDonor demographic data
+load("~/CRP_enrichment/data/r02ds.donorData.rdata") # outputs an object called "output" into the environment
+findonor <- output
+
+# Combine the FinDonor datasets
+FinDonor <- left_join(donors, findonor, by = "donor")
+
+df <- FinDonor %>% 
+    select(Ferritin, Hb, TransferrinR) %>% 
+    rename(Haemoglobin = Hb, sTfR = TransferrinR)
 ```
 
 ```{r set_datadist, echo = FALSE}
+# rms wants to compute and save distribution stats for the data to do anything
 dd <- datadist(df)
 options(datadist = "dd")
 ```
 
-# Haemoglobin
-## Fit RCS with varying number of knots
+# Restricted Cubic Splines (Mei & Addot et al. approach)
+
+## Haemoglobin
+### Fit RCS with varying number of knots
 
 ```{r hb_fits}
+
 hb3 <- ols(Haemoglobin ~ rcs(Ferritin, 3), 
            data = df, 
            x = TRUE, 
@@ -182,49 +216,74 @@ ggplot(data = hb_AIC_df, aes(x = knots,
 
 ```
 
-```{r hb_plot_fits, fig.align = "center"}
+```{r hb_plot_fits, fig.align = "center", warning = FALSE}
 # You may choose to plot, for example, all those model fits that have delta < 2.
-hb_p1 <- ggplot(Predict(FIT_OBJ)) + 
+FIT_OBJ1 <- hb7
+FIT_OBJ2 <- hb8
+FIT_OBJ3 <- hb9
+FIT_OBJ4 <- hb10
+
+hb_p1 <- ggplot(Predict(FIT_OBJ1)) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
                        limits = c(0, 120)) +
+    # The lines below draw the line for the plateau point if there is one, feel free to del and/or alter interval
+    geom_vline(xintercept = optimize(Function(FIT_OBJ1), interval = c(5, 30), maximum = TRUE)$maximum, linetype = "dashed", color = "red") +
     theme_minimal() + 
-    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
-         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ1$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ1)), 
+                          " | Local maximum:", 
+                          round(optimize(Function(FIT_OBJ1), interval = c(5, 30), maximum = TRUE)$maximum, 1),
+                          "μg/L"),
          x = "Serum ferritin concentrations (μg/L)",
          y = "Haemoglobin concentration (g/L)")
 
-hb_p2 <- ggplot(Predict(FIT_OBJ)) + 
+hb_p2 <- ggplot(Predict(FIT_OBJ2)) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
                        limits = c(0, 120)) +
+    # The lines below draw the line for the plateau point if there is one, feel free to del and/or alter interval
+    geom_vline(xintercept = optimize(Function(FIT_OBJ2), interval = c(5, 30), maximum = TRUE)$maximum, linetype = "dashed", color = "red") +
     theme_minimal() + 
-    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
-         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ2$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ2)), 
+                          " | Local maximum:", 
+                          round(optimize(Function(FIT_OBJ2), interval = c(5, 30), maximum = TRUE)$maximum, 1),
+                          "μg/L"),
          x = "Serum ferritin concentrations (μg/L)",
          y = "Haemoglobin concentration (g/L)")
 
-hb_p3 <- ggplot(Predict(FIT_OBJ)) + 
+hb_p3 <- ggplot(Predict(FIT_OBJ3)) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
                        limits = c(0, 120)) +
+    # The lines below draw the line for the plateau point if there is one, feel free to del and/or alter interval
+    geom_vline(xintercept = optimize(Function(FIT_OBJ3), interval = c(5, 30), maximum = TRUE)$maximum, linetype = "dashed", color = "red") +
     theme_minimal() + 
-    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
-         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ3$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ3)), 
+                          " | Local maximum:", 
+                          round(optimize(Function(FIT_OBJ3), interval = c(5, 30), maximum = TRUE)$maximum, 1),
+                          "μg/L"),
          x = "Serum ferritin concentrations (μg/L)",
          y = "Haemoglobin concentration (g/L)")
 
-hb_p4 <- ggplot(Predict(FIT_OBJ)) + 
+hb_p4 <- ggplot(Predict(FIT_OBJ4)) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
                        limits = c(0, 120)) +
+    # The lines below draw the line for the plateau point if there is one, feel free to del and/or alter interval
+    geom_vline(xintercept = optimize(Function(FIT_OBJ4), interval = c(5, 30), maximum = TRUE)$maximum, linetype = "dashed", color = "red") +
     theme_minimal() + 
-    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
-         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ4$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ4)), 
+                          " | Local maximum:", 
+                          round(optimize(Function(FIT_OBJ4), interval = c(5, 30), maximum = TRUE)$maximum, 1),
+                          "μg/L"),
          x = "Serum ferritin concentrations (μg/L)",
          y = "Haemoglobin concentration (g/L)")
 
 multiplot(hb_p1, hb_p2, hb_p3, hb_p4, cols = 2)
 ```
 
-# sTfR
-## Fit RCS with varying number of knots
+## sTfR
+### Fit RCS with varying number of knots
 
 ```{r stfr_fits}
 stfr3 <- ols(sTfR ~ rcs(Ferritin, 3), 
@@ -332,41 +391,113 @@ ggplot(data = stfr_AIC_df, aes(x = knots,
 
 ```{r stfr_plot_fits, fig.align = "center"}
 # You may choose to plot, for example, all those model fits that have delta < 2.
-stfr_p1 <- ggplot(Predict(FIT_OBJ)) + 
-    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
-                       limits = c(0, 120)) +
-    theme_minimal() + 
-    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
-         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
-         x = "Serum ferritin concentrations (μg/L)",
-         y = "sTfR concentrations (mg/L)")
+FIT_OBJ1 <- stfr7
+FIT_OBJ2 <- stfr8
+FIT_OBJ3 <- stfr9
+FIT_OBJ4 <- stfr10
 
-stfr_p2 <- ggplot(Predict(FIT_OBJ)) + 
+stfr_p1 <- ggplot(Predict(FIT_OBJ1)) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
                        limits = c(0, 120)) +
+    # The lines below draw the line for the plateau point if there is one, feel free to del and/or alter interval
+    geom_vline(xintercept = optimize(Function(FIT_OBJ1), interval = c(5, 30), maximum = FALSE)$minimum, linetype = "dashed", color = "red") +
     theme_minimal() + 
-    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
-         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ1$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ1)), 
+                          " | Local minimum:", 
+                          round(optimize(Function(FIT_OBJ1), interval = c(5, 30), maximum = FALSE)$minimum, 1),
+                          "μg/L"),
          x = "Serum ferritin concentrations (μg/L)",
-         y = "sTfR concentrations (mg/L)")
+         y = "sTfR concentration (mg/L)")
 
-stfr_p3 <- ggplot(Predict(FIT_OBJ)) + 
+stfr_p2 <- ggplot(Predict(FIT_OBJ2)) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
                        limits = c(0, 120)) +
+    # The lines below draw the line for the plateau point if there is one, feel free to del and/or alter interval
+    geom_vline(xintercept = optimize(Function(FIT_OBJ2), interval = c(5, 30), maximum = FALSE)$minimum, linetype = "dashed", color = "red") +
     theme_minimal() + 
-    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
-         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ2$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ2)), 
+                          " | Local minimum:", 
+                          round(optimize(Function(FIT_OBJ2), interval = c(5, 30), maximum = FALSE)$minimum, 1),
+                          "μg/L"),
          x = "Serum ferritin concentrations (μg/L)",
-         y = "sTfR concentrations (mg/L)")
+         y = "sTfR concentration (mg/L)")
 
-stfr_p4 <- ggplot(Predict(FIT_OBJ)) + 
+stfr_p3 <- ggplot(Predict(FIT_OBJ3)) + 
     scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
                        limits = c(0, 120)) +
+    # The lines below draw the line for the plateau point if there is one, feel free to del and/or alter interval
+    geom_vline(xintercept = optimize(Function(FIT_OBJ3), interval = c(5, 30), maximum = FALSE)$minimum, linetype = "dashed", color = "red") +
     theme_minimal() + 
-    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ$coefficients), "knots"),
-         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ)))
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ3$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ3)), 
+                          " | Local minimum:", 
+                          round(optimize(Function(FIT_OBJ3), interval = c(5, 30), maximum = FALSE)$minimum, 1),
+                          "μg/L"),
          x = "Serum ferritin concentrations (μg/L)",
-         y = "sTfR concentrations (mg/L)")
+         y = "sTfR concentration (mg/L)")
+
+stfr_p4 <- ggplot(Predict(FIT_OBJ4)) + 
+    scale_x_continuous(breaks = c(0, 20, 40, 60, 80, 100, 120), 
+                       limits = c(0, 120)) +
+    # The lines below draw the line for the plateau point if there is one, feel free to del and/or alter interval
+    geom_vline(xintercept = optimize(Function(FIT_OBJ4), interval = c(5, 30), maximum = FALSE)$minimum, linetype = "dashed", color = "red") +
+    theme_minimal() + 
+    labs(title = paste("Restricted cubic spline,", length(FIT_OBJ4$coefficients), "knots"),
+         subtitle = paste("AIC:", as.integer(AIC(FIT_OBJ4)), 
+                          " | Local minimum´:", 
+                          round(optimize(Function(FIT_OBJ4), interval = c(5, 30), maximum = FALSE)$minimum, 1),
+                          "μg/L"),
+         x = "Serum ferritin concentrations (μg/L)",
+         y = "sTfR concentration (mg/L)")
 
 multiplot(stfr_p1, stfr_p2, stfr_p3, stfr_p4, cols = 2)
+```
+
+
+# Breakpoint analysis
+
+Let's use piecewise linear regression to estimate a breakpoint. This takes a while depending on the number of iterations you wish to use (raising the number may help chains to converge).
+
+```{r mcp_fit, cache = TRUE}
+# Specify model
+model_spec_haem <- list(Haemoglobin ~ Ferritin,
+                   ~ 0 + Ferritin)
+model_spec_stfr <- list(sTfR ~ Ferritin,
+                   ~ 0 + Ferritin)
+
+# Fit
+mcp_fit_haem <- mcp(model_spec_haem, 
+               data = na.omit(df),
+               adapt = 3000,
+               iter = 500,
+               chains = 4,
+               cores = 4)
+mcp_fit_stfr <- mcp(model_spec_stfr, 
+               data = na.omit(df),
+               adapt = 3000,
+               iter = 500,
+               chains = 4,
+               cores = 4)
+```
+
+```{r mcp_summary}
+summary(mcp_fit_haem)
+summary(mcp_fit_stfr)
+```
+
+```{r mcp_plot, warning = FALSE, message = FALSE, fig.aling = "center"}
+plot(mcp_fit_haem) +
+    theme_minimal() +
+    coord_cartesian(xlim = c(0, 100)) 
+
+plot(mcp_fit_stfr) +
+    theme_minimal() +
+    coord_cartesian(xlim = c(0, 100)) 
+```
+
+```{r mcp_checks, fig.align = "center"}
+plot_pars(mcp_fit_haem, regex_pars = "cp_")
+plot_pars(mcp_fit_stfr, regex_pars = "cp_")
 ```
