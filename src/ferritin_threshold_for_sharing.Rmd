@@ -69,35 +69,14 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
 # Haemoglobin: haemoglobin column name
 # sTfR: soluble transferritin receptor column name
 
-#data <- load("~/stuff.Rdata") # or any other method
+data <- load("~/stuff.Rdata")
 
 # Filter if necessary
 
 # Select and rename
-# df <- data %>% 
-#     select(YourFerritinColumnName, YourHbColumnName, YourStfrColumnName) %>% 
-#     rename(Ferritin = YourFerritinColumnName, Haemoglobin = YourHbColumnName, sTfR = YourStfrColumnName)
-
-# Load data on individual donations
-load("~/CRP_enrichment/data/r02.fd.bd.all.rdata") # outputs an object called "output" into the environment
-donations <- output
-
-# We only want to look at first donation event values from each donor
-donors <- donations %>%
-    group_by(donor) %>%
-    filter(date == min(date)) %>%
-    ungroup()
-
-# Load FinDonor demographic data
-load("~/CRP_enrichment/data/r02ds.donorData.rdata") # outputs an object called "output" into the environment
-findonor <- output
-
-# Combine the FinDonor datasets
-FinDonor <- left_join(donors, findonor, by = "donor")
-
-df <- FinDonor %>% 
-    select(Ferritin, Hb, TransferrinR) %>% 
-    rename(Haemoglobin = Hb, sTfR = TransferrinR)
+df <- data %>%
+    select(YourFerritinColumnName, YourHbColumnName, YourStfrColumnName) %>%
+    rename(Ferritin = YourFerritinColumnName, Haemoglobin = YourHbColumnName, sTfR = YourStfrColumnName)
 ```
 
 ```{r set_datadist, echo = FALSE}
