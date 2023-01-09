@@ -7,91 +7,75 @@ output:
         keep_md: yes
 ---
 
-```{r libraries, message=FALSE}
+
+```r
 library(tidyverse)
 library(rms)
+```
+
+```
+## Warning in .recacheSubclasses(def@className, def, env): undefined subclass
+## "numericVector" of class "Mnumeric"; definition not updated
+```
+
+```r
 library(mcp)
 ```
 
-```{r define_multiplot, echo = FALSE}
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-    # http://www.cookbook-r.com/Graphs/Multiple_graphs_on_one_page_(ggplot2)/
-    # Multiple plot function
-    #
-    # ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
-    # - cols:   Number of columns in layout
-    # - layout: A matrix specifying the layout. If present, 'cols' is ignored.
-    #
-    # If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
-    # then plot 1 will go in the upper left, 2 will go in the upper right, and
-    # 3 will go all the way across the bottom.
-    #
 
-    library(grid)
 
-    # Make a list from the ... arguments and plotlist
-    plots <- c(list(...), plotlist)
 
-    numPlots = length(plots)
-
-    # If layout is NULL, then use 'cols' to determine layout
-    if (is.null(layout)) {
-        # Make the panel
-        # ncol: Number of columns of plots
-        # nrow: Number of rows needed, calculated from # of cols
-        layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                         ncol = cols, nrow = ceiling(numPlots/cols))
-    }
-
-    if (numPlots==1) {
-        print(plots[[1]])
-    } else {
-        # Set up the page
-        grid.newpage()
-        pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-
-        # Make each plot, in the correct location
-        for (i in 1:numPlots) {
-            # Get the i,j matrix positions of the regions that contain this subplot
-            matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-
-        print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                        layout.pos.col = matchidx$col))
-        }
-    }
-}
-```
-
-```{r load_data}
+```r
 # This Rmd assumes the following naming conventions, but you may refactor as you please:
 # df: dataframe containing ferritin, haemoglobin, and sTfR values
 # Ferritin: ferritin column name
 # Haemoglobin: haemoglobin column name
 # sTfR: soluble transferritin receptor column name
 
-data <- load("~/stuff.Rdata")
+# data <- load("~/stuff.Rdata")
+# 
+# # Filter if necessary
+# 
+# # Select and rename
+# df <- data %>%
+#     select(YourFerritinColumnName, YourHbColumnName, YourStfrColumnName) %>%
+#     rename(Ferritin = YourFerritinColumnName, Haemoglobin = YourHbColumnName, sTfR = YourStfrColumnName)
 
-# Filter if necessary
+# Below for demo purposes
+# Load data on individual donations
+load("~/CRP_enrichment/data/r02.fd.bd.all.rdata") # outputs an object called "output" into the environment
+donations <- output
 
-# Select and rename
-df <- data %>%
-    select(YourFerritinColumnName, YourHbColumnName, YourStfrColumnName) %>%
-    rename(Ferritin = YourFerritinColumnName, Haemoglobin = YourHbColumnName, sTfR = YourStfrColumnName)
+# We only want to look at first donation event values from each donor
+donors <- donations %>%
+    group_by(donor) %>%
+    filter(date == min(date)) %>%
+    ungroup()
+
+# Load FinDonor demographic data
+load("~/CRP_enrichment/data/r02ds.donorData.rdata") # outputs an object called "output" into the environment
+findonor <- output
+
+# Combine the FinDonor datasets
+FinDonor <- left_join(donors, findonor, by = "donor")
+
+# Filter
+df <- FinDonor %>%
+    filter(age >= 20 & age <= 49) %>%
+    filter(gender == "Women") %>%
+    select(Hb, Ferritin, TransferrinR) %>% 
+    rename(Haemoglobin = Hb, sTfR = TransferrinR)
 ```
 
-```{r set_datadist, echo = FALSE}
-# rms wants to compute and save distribution stats for the data to do anything
-dd <- datadist(df)
-options(datadist = "dd")
-```
+
 
 # Restricted Cubic Splines (Mei & Addot et al. approach)
 
 ## Haemoglobin
 ### Fit RCS with varying number of knots
 
-```{r hb_fits}
 
+```r
 hb3 <- ols(Haemoglobin ~ rcs(Ferritin, 3), 
            data = df, 
            x = TRUE, 
@@ -134,7 +118,8 @@ hb12 <- ols(Haemoglobin ~ rcs(Ferritin, 12),
             y = TRUE)
 ```
 
-```{r hb_compare_AIC, warning = FALSE, fig.align = "center"}
+
+```r
 Hb_AIC <- c(AIC(hb3),
             AIC(hb4), 
             AIC(hb5), 
@@ -192,10 +177,12 @@ ggplot(data = hb_AIC_df, aes(x = knots,
              hjust = -1.34,
              vjust = 3) +
     theme_minimal()
-
 ```
 
-```{r hb_plot_fits, fig.align = "center", warning = FALSE}
+<img src="ferritin_threshold_for_sharing_files/figure-html/hb_compare_AIC-1.png" style="display: block; margin: auto;" />
+
+
+```r
 # You may choose to plot, for example, all those model fits that have delta < 2.
 FIT_OBJ1 <- hb4
 FIT_OBJ2 <- hb5
@@ -261,10 +248,13 @@ hb_p4 <- ggplot(Predict(FIT_OBJ4)) +
 multiplot(hb_p1, hb_p2, hb_p3, hb_p4, cols = 2)
 ```
 
+<img src="ferritin_threshold_for_sharing_files/figure-html/hb_plot_fits-1.png" style="display: block; margin: auto;" />
+
 ## sTfR
 ### Fit RCS with varying number of knots
 
-```{r stfr_fits}
+
+```r
 stfr3 <- ols(sTfR ~ rcs(Ferritin, 3), 
            data = df, 
            x = TRUE, 
@@ -307,7 +297,8 @@ stfr12 <- ols(sTfR ~ rcs(Ferritin, 12),
             y = TRUE)
 ```
 
-```{r stfr_compare_AIC, warning = FALSE, fig.align = "center"}
+
+```r
 stfr_AIC <- c(AIC(stfr3),
               AIC(stfr4), 
               AIC(stfr5), 
@@ -365,10 +356,12 @@ ggplot(data = stfr_AIC_df, aes(x = knots,
              hjust = -1.34,
              vjust = 3) +
     theme_minimal()
-
 ```
 
-```{r stfr_plot_fits, fig.align = "center"}
+<img src="ferritin_threshold_for_sharing_files/figure-html/stfr_compare_AIC-1.png" style="display: block; margin: auto;" />
+
+
+```r
 # You may choose to plot, for example, all those model fits that have delta < 2.
 FIT_OBJ1 <- stfr7
 FIT_OBJ2 <- stfr8
@@ -434,12 +427,15 @@ stfr_p4 <- ggplot(Predict(FIT_OBJ4)) +
 multiplot(stfr_p1, stfr_p2, stfr_p3, stfr_p4, cols = 2)
 ```
 
+<img src="ferritin_threshold_for_sharing_files/figure-html/stfr_plot_fits-1.png" style="display: block; margin: auto;" />
+
 
 # Breakpoint analysis
 
 Let's use piecewise linear regression to estimate a breakpoint. This takes a while depending on the number of iterations you wish to use (raising the number may help chains to converge).
 
-```{r mcp_fit, cache = TRUE}
+
+```r
 # Specify model
 model_spec_haem <- list(Haemoglobin ~ Ferritin,
                    ~ 0 + Ferritin)
@@ -453,6 +449,31 @@ mcp_fit_haem <- mcp(model_spec_haem,
                iter = 500,
                chains = 4,
                cores = 4)
+```
+
+```
+## Parallel sampling in progress...
+```
+
+```
+## Warning: Strategy 'multiprocess' is deprecated in future (>= 1.20.0). Instead,
+## explicitly specify either 'multisession' or 'multicore'. In the current R
+## session, 'multiprocess' equals 'multisession'.
+```
+
+```
+## Warning in supportsMulticoreAndRStudio(...): [ONE-TIME WARNING] Forked
+## processing ('multicore') is not supported when running R from RStudio
+## because it is considered unstable. For more details, how to control forked
+## processing or not, and how to silence this warning in future R sessions, see ?
+## parallelly::supportsMulticore
+```
+
+```
+## Finished sampling in 18.2 seconds
+```
+
+```r
 mcp_fit_stfr <- mcp(model_spec_stfr, 
                data = na.omit(df),
                adapt = 3000,
@@ -461,22 +482,81 @@ mcp_fit_stfr <- mcp(model_spec_stfr,
                cores = 4)
 ```
 
-```{r mcp_summary}
+```
+## Parallel sampling in progress...
+```
+
+```
+## Finished sampling in 12.5 seconds
+```
+
+
+```r
 summary(mcp_fit_haem)
+```
+
+```
+## Family: gaussian(link = 'identity')
+## Iterations: 2000 from 4 chains.
+## Segments:
+##   1: Haemoglobin ~ Ferritin
+##   2: Haemoglobin ~ 1 ~ 0 + Ferritin
+## 
+## Population-level parameters:
+##        name    mean    lower   upper Rhat n.eff
+##        cp_1  29.060  19.0489  41.369  1.2    20
+##  Ferritin_1   0.381   0.1618   0.620  1.1   314
+##  Ferritin_2   0.023  -0.0054   0.055  1.2    43
+##       int_1 128.196 124.6510 132.008  1.2    34
+##     sigma_1   9.360   8.9485   9.766  1.0  1238
+```
+
+```r
 summary(mcp_fit_stfr)
 ```
 
-```{r mcp_plot, warning = FALSE, message = FALSE, fig.aling = "center"}
+```
+## Family: gaussian(link = 'identity')
+## Iterations: 2000 from 4 chains.
+## Segments:
+##   1: sTfR ~ Ferritin
+##   2: sTfR ~ 1 ~ 0 + Ferritin
+## 
+## Population-level parameters:
+##        name    mean   lower  upper Rhat n.eff
+##        cp_1 16.7317 14.9562 18.540  2.1    16
+##  Ferritin_1 -0.2331 -0.2860 -0.189  1.0   391
+##  Ferritin_2 -0.0069 -0.0098 -0.004  1.7    56
+##       int_1  7.1865  6.6566  7.718  2.1    25
+##     sigma_1  0.9878  0.9455  1.036  1.0  1219
+```
+
+
+```r
 plot(mcp_fit_haem) +
     theme_minimal() +
     coord_cartesian(xlim = c(0, 100)) 
+```
 
+![](ferritin_threshold_for_sharing_files/figure-html/mcp_plot-1.png)<!-- -->
+
+```r
 plot(mcp_fit_stfr) +
     theme_minimal() +
     coord_cartesian(xlim = c(0, 100)) 
 ```
 
-```{r mcp_checks, fig.align = "center"}
+![](ferritin_threshold_for_sharing_files/figure-html/mcp_plot-2.png)<!-- -->
+
+
+```r
 plot_pars(mcp_fit_haem, regex_pars = "cp_")
+```
+
+<img src="ferritin_threshold_for_sharing_files/figure-html/mcp_checks-1.png" style="display: block; margin: auto;" />
+
+```r
 plot_pars(mcp_fit_stfr, regex_pars = "cp_")
 ```
+
+<img src="ferritin_threshold_for_sharing_files/figure-html/mcp_checks-2.png" style="display: block; margin: auto;" />
