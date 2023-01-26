@@ -35,7 +35,7 @@ To find this threshold, they chose a restricted cubic spline model with 5 knots.
 In this report we'll focus on apparently healthy non-pregnant women (by recorded gender, pregnancy status and blood donor eligibility criteria available in the Health 2000 cohort), so here are the results for women in Mei et al. (reproduced without permission!):
 
 <center>
-![Serum ferritin threshold calculation for non-pregnant women](/home/esa/who_ferritin_comment/src/fer_comment_files/figure-html/plot_women_mei_et_al.png)
+![Serum ferritin threshold calculation for non-pregnant women](/home/esa/who_ferritin_comment/results/plot_women_mei_et_al.png)
 </center>
 
 Mei et al. determine the threshold by computing the zero derivatives of the resulting fits, implicitly arguing that the "plateau before the fall/rise" constitutes as the _de facto_ threshold. The threshold generated this way are 25.2 μg/L and 24.0 μg/L for hemoglobin and sTfR, respectively. These vary somewhat when stratifying by age. It is however immediately interesting that these thresholds settle around the same number for both hemoglobin and sTfR, and that they defy the visual inspection of the scatter plot / median line, which points closer to the WHO threshold.
@@ -43,7 +43,7 @@ Mei et al. determine the threshold by computing the zero derivatives of the resu
 Later, in 2022, they replicated their results with Retrovirus Epidemiology Donor Study-II Donor Iron Status Evaluation (REDS-RISE) blood donor data (this time Addo et al.). [[3](https://ashpublications.org/bloodadvances/article/6/12/3661/484681/Physiologically-based-serum-ferritin-thresholds)] 
 
 <center>
-![Concentration curve of serum ferritin against hemoglobin, and soluble transferrin receptor in a sample of women who are blood donors.](/home/esa/who_ferritin_comment/src/fer_comment_files/figure-html/addo_et_al.png)
+![Concentration curve of serum ferritin against hemoglobin, and soluble transferrin receptor in a sample of women who are blood donors.](/home/esa/who_ferritin_comment/results/addo_et_al.png)
 </center>
 
 # Replication
@@ -545,12 +545,14 @@ ggplot(data = apparently_healthy, aes(x = Ferritin, y = Hemoglobin)) +
     geom_point() +
     theme_minimal() +
     geom_line(data = model, aes(x = Ferritin, y = Hemoglobin), colour = "red", size = 1.4) +
-    scale_x_continuous(limits = c(0, 100))
+    scale_x_continuous(limits = c(0, 100)) +
+    labs(title = "Linear piecewise with 'segmented'",
+         subtitle = paste("AIC:", round(AIC(segfit), 2)))
 ```
 
 ## Using `mcp`
 
-```{r mcp_fit, cache = TRUE}
+```{r mcp_fit, cache = TRUE, warning = FALSE}
 # Specify model
 model_spec <- list(Hemoglobin ~ Ferritin,
                    ~ 0 + Ferritin)
@@ -558,7 +560,7 @@ model_spec <- list(Hemoglobin ~ Ferritin,
 mcp_fit <- mcp(model_spec, 
                data = na.omit(apparently_healthy),
                adapt = 3000,
-               iter = 50000,
+               iter = 500,
                chains = 4,
                cores = 4)
 ```
@@ -598,16 +600,21 @@ ggplot(data = donors_oi, aes(x = Ferritin, y = Hb)) +
     geom_point() +
     theme_minimal() +
     geom_line(data = model_fd_haem, aes(x = Ferritin, y = Hb), colour = "red", size = 1.4) +
-    scale_x_continuous(limits = c(0, 100))
+    scale_x_continuous(limits = c(0, 100)) +
+    labs(title = "Linear piecewise with 'segmented' | Haemoglobin",
+         subtitle = paste("AIC:", round(AIC(segfit_fd_haem), 2)))
 
 ggplot(data = donors_oi, aes(x = Ferritin, y = TransferrinR)) +
     geom_point() +
     theme_minimal() +
     geom_line(data = model_fd_stfr, aes(x = Ferritin, y = TransferrinR), colour = "red", size = 1.4) +
-    scale_x_continuous(limits = c(0, 100))
+    scale_x_continuous(limits = c(0, 100)) +
+    labs(title = "Linear piecewise with 'segmented' | sTfR",
+         subtitle = paste("AIC:", round(AIC(segfit_fd_stfr), 2)))
 
 
 ```
+
 ## Using `mcp` | FinDonor
 
 ```{r mcp_fit_findonor, cache = TRUE}
@@ -620,13 +627,13 @@ model_spec_stfr <- list(TransferrinR ~ Ferritin,
 mcp_fit_haem <- mcp(model_spec_haem, 
                data = na.omit(donors_oi),
                adapt = 3000,
-               iter = 50000,
+               iter = 500,
                chains = 4,
                cores = 4)
 mcp_fit_stfr <- mcp(model_spec_stfr, 
                data = na.omit(donors_oi),
                adapt = 3000,
-               iter = 50000,
+               iter = 500,
                chains = 4,
                cores = 4)
 ```
