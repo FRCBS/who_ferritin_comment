@@ -1,0 +1,312 @@
+---
+title: "Approaches for ferritin thresholds"
+author: "Esa Turkulainen"
+format: html
+---
+
+```{r}
+#| label: libraries
+#| code-fold: true
+#| code-summary: Load libraries
+#| message: false
+
+source("~/who_ferritin_comment/src/results_helper_funcs.R")
+library(dplyr) # for fluid grammar
+library(ggplot2) # for plotting
+library(rms) # for restricted cubic splines
+library(mcp) # for bayesian breakpoint analysis
+library(boot) # for bootstrapping
+```
+
+```{r}
+#| label: settings
+#| code-fold: true
+#| code-summary: Settings
+#| message: false
+
+FIGUREPATH <- "~/who_ferritin_comment/results/figures/"
+TABLEPATH <- "~/who_ferritin_comment/results/tables/"
+```
+
+
+# Intro
+
+This document is intended to be run as is, but it is written into a Quarto document (so code chunks + text) to enable additional experimentation by the user if deemed necessary.
+
+In this script we assume the following:
+
+1) Your data is clean
+2) It describes only one subgroup at a time
+3) You have the following naming conventions for variables:
+    3.1) Serum ferritin as "Ferritin"
+    3.2) Haemoglobin as "Hb"
+    3.3) Soluble transferrin receptor as "sTfR"
+    
+Data / cohort descriptions are produced and discussed elsewhere. This document outputs result tables and graphs. This document is also available as an R script.
+
+```{r}
+#| label: load-data
+#| code-fold: true
+#| code-summary: Load data
+
+# Load in your data frame. Note the analysis assumptions 1), 2), and 3).
+data <- readRDS("~/who_ferritin_comment/data/h2000_menstr_women_apparently_healthy.rds")
+```
+
+
+```{r}
+#| label: stfr-boolean
+#| code-fold: true
+#| code-summary: Do you have the sTfR variable? Yes -> TRUE; No/Default -> FALSE
+sTfR.exists <- FALSE
+```
+
+# Number crunching
+
+## Visualize data
+
+```{r, eval = !sTfR.exists, echo = !sTfR.exists}
+#| label: hemoglobin-ferritin-scatterplot
+#| code-fold: true
+#| code-summary: Plot Haemoglobin x Ferritin
+#| message: false
+#| warning: false
+#| fig.align: center
+
+
+plot_ferritin_hb <- ggplot(data = data, aes(x = Ferritin,
+                                            y = Hb)) +
+    geom_point() +
+    labs(y = "Haemoglobin") +
+    xlim(c(0, 150)) + # TODO: This provides a reasonable range but is there a better one?
+    theme_minimal()
+
+# Save plot to a PDF file
+ggsave(paste0(FIGUREPATH, "ferritin_hb_plot.pdf"), plot_ferritin_hb, width = 8, height = 6)
+
+plot_ferritin_hb
+```
+
+```{r, eval = sTfR.exists, echo = sTfR.exists}
+#| label: hemoglobin-ferritin-stfr-scatterplot
+#| code-fold: true
+#| code-summary: Plot Haemoglobin x Ferritin and sTfR
+#| message: false
+#| warning: false
+
+
+plot_ferritin_hb <- ggplot(data = data, aes(x = Ferritin,
+                                            y = Hb)) +
+    geom_point() +
+    labs(y = "Haemoglobin") +
+    xlim(c(0, 150)) + # TODO: This provides a reasonable range but is there a better one?
+    theme_minimal()
+
+# Save plot to a PDF file
+ggsave(paste0(FIGUREPATH, "ferritin_hb_plot.pdf"), plot_ferritin_hb, width = 8, height = 6)
+
+plot_ferritin_hb
+
+plot_ferritin_stfr <- ggplot(data = data, aes(x = Ferritin,
+                                            y = sTfR)) +
+    geom_point() +
+    labs(y = "sTfR") +
+    xlim(c(0, 150)) + # TODO: This provides a reasonable range but is there a better one?
+    theme_minimal()
+
+# Save plot to a PDF file
+ggsave(paste0(FIGUREPATH, "ferritin_stfr_plot.pdf"), plot_ferritin_stfr, width = 8, height = 6)
+
+plot_ferritin_stfr
+```
+
+## Restricted cubic splines
+
+Our restricted cubic spline approach relies on the `rms: Regression Modeling Strategies` package. We use the ordinary least squares function `ols()` to fit a model with a "special transformation function" `rcs()` from `rms.trans`. From the [documentation](https://rdocumentation.org/packages/rms/versions/6.5-0/topics/rms.trans):
+
+> `rcs` is a linear tail-restricted cubic spline function (natural spline, for  
+> which the `rcspline.eval` function generates the design matrix, the presence of 
+> system option `rcspc` causes `rcspline.eval` to be invoked with `pc=TRUE`, and 
+> the presence of system option `fractied` causes this value to be passed to 
+> `rcspline.eval` as the fractied argument)
+
+The `rcspline.eval` relies on the `Hmisc` package. The default behavior is to use 5 knots placed at estimated quantiles of `x`:
+
+> ... knots will be estimated using default quantiles of x. For 3 knots, the outer quantiles used 
+> are 0.10 and 0.90. For 4-6 knots, the outer quantiles used are 0.05 and 0.95. For \code{nk}>6, 
+> the outer quantiles are 0.025 and 0.975. The knots are equally spaced between these on the 
+> quantile scale. For fewer than 100 non-missing values of x, the outer knots are the 5th smallest 
+> and largest x.
+
+Other configurations of knot placements may be useful to consider if well motivated, but we'll settle for varying just the number of knots.
+
+`rms` wants us to compute and record the data distribution stats first: 
+
+```{r}
+#| label: set-datadist
+#| code-fold: true
+#| code-summary: Set datadist
+#| message: false
+#| warning: false
+
+
+dd <- datadist(data)
+options(datadist = "dd")
+```
+
+We can then proceed with fitting the restricted cubic splines.
+
+```{r}
+#| label: fit-all-rcs
+#| code-fold: true
+#| code-summary: Fit rcs
+#| message: false
+#| warning: false
+
+knots <- 3:15
+fits <- vector("list", length = length(knots))
+for (i in 1:length(knots)) {
+    fits[[i]] <- ols(Hb ~ rcs(Ferritin, knots[i]), 
+                   data = data, 
+                   x = TRUE, 
+                   y = TRUE)
+}
+```
+
+The main idea in using restricted cubic splines is that we are likely to observe a "saddle point", which can be interpreted as an inflection point in the behavior between `X` and `Y`. If the saddle point exists, we can evaluate the zero derivative to find a point estimate for the threshold we're attempting to determine. Let's produce plots of all of our fits:
+
+```{r}
+#| label: plot-all-rcs
+#| code-fold: true
+#| code-summary: Plot rcs
+#| message: false
+#| warning: false
+
+for (i in 1:length(knots)) {
+    p <- plot_rcs(data, fits[[i]], n_knot = i + 2, zoom = F)
+    # Save plot to a PDF file
+    ggsave(paste0(FIGUREPATH, "hb_fer_rcs_", i + 2, ".pdf"), p, width = 8, height = 6, device = cairo_pdf)
+    print(p)
+}
+
+```
+
+We may gain better understanding by zooming in a little:
+
+```{r}
+#| label: plot-all-rcs-zoomed
+#| code-fold: true
+#| code-summary: Plot rcs
+#| message: false
+#| warning: false
+
+for (i in 1:length(knots)) {
+    p <- plot_rcs(data, fits[[i]], n_knot = i + 2, zoom = T)
+    # Save plot to a PDF file
+    ggsave(paste0(FIGUREPATH, "hb_fer_rcs_", i + 2, "_zoomed.pdf"), p, width = 8, height = 6, device = cairo_pdf)
+    print(p)
+}
+
+```
+
+We will proceed with model selection using Akaike Information Criterion. There may be valid reasons to select models using domain specific information instead. This kind of information could include:
+
+1. Prior credible research on about the location of the threshold
+2. Arguments for the linearity / non-linearity of this phenomenon
+3. Information about multiple phases within this process
+
+Here we're assuming that none of these are available to us.
+
+To properly compare model AICs against each other, we rely on theory or a rule of thumb, outlined e.g. by [Burnham and Anderson (2004)](http://faculty.washington.edu/skalski/classes/QERM597/papers_xtra/Burnham%20and%20Anderson.pdf)
+
+Comparing AICs is best done by comparing their differences:
+$$
+\Delta_i = \text{AIC}_i - \text{AIC}_{min}.
+$$
+The rule of thumb goes as follows:
+
+* $\Delta_i < 2$: very probable that the $i$th model describes the data as well as the model that minimizes AIC.
+* $2 < \Delta_i < 4$: strong evidence that the $i$th model describes the data as well as the model that minimizes AIC.
+* $4 < \Delta_i < 7$: little evidence
+* $\Delta_i > 10$: no contest
+
+Leveraging this logic, we can also compute the _relative probability_ that the $i$th method is actually the one that minimizes AIC:
+$$
+p_i = e^{\frac{-\Delta_i}{2}}.
+$$
+Knowing this, we may now compute the AIC differences and easily demonstrate the effect of knot numbers on the model performance.
+
+```{r}
+#| label: compute-AIC-rcs
+#| code-fold: true
+#| code-summary: Computing the AICs
+#| cache: true
+#| fig.align: center
+
+AICs <- unlist(lapply(fits, AIC))
+
+AIC_min <- min(AICs)
+
+AIC_mindiff <- AICs - AIC_min
+
+probs <- exp(-AIC_mindiff / 2) * 100
+
+AIC_df <- data.frame(knots = knots,
+                        AIC_delta = AIC_mindiff,
+                        probs = probs)
+
+ggplot(data = AIC_df, aes(x = knots, 
+                             y = AIC_delta)) +
+    geom_point() +
+    geom_hline(yintercept = 2, 
+               linetype = "dashed", 
+               color = "red") +
+    geom_hline(yintercept = 4, 
+               linetype = "dashed", 
+               color = "orange") +
+    geom_hline(yintercept = 7, 
+               linetype = "dashed", 
+               color = "yellow") +
+    labs(x = "Number of knots in an RCS model",
+         y = bquote(Delta[i] ~ " = " ~ AIC[min] ~ " - " ~ AIC[i])) +
+    scale_x_continuous(breaks = c(3, 4, 5, 6, 7, 8, 9, 10, 11, 12)) +
+    scale_y_continuous(breaks = c(2, 4, 7), limits = c(0, 50)) +
+    geom_segment(aes(x = knots, y = AIC_delta + 3, xend = knots, yend = AIC_delta + 8), alpha = 0.2) +
+     geom_text(aes(label = paste0(round(probs, 2), "%")), nudge_y = 10, nudge_x = 0.1) + 
+    theme_minimal()
+```
+
+From these, we will select the simplest model that stays above 5% probability.
+
+```{r}
+selected_knot <- AIC_df %>% 
+    filter(probs > 5) %>% 
+    slice(1) %>% 
+    select(knots) %>% 
+    as.integer()
+
+selected_knot
+```
+
+We will now bootstrap a confidence interval for the saddle point (if one exists).
+
+```{r}
+boot_saddle <- function(data, n_knot, i) {
+    sample <- data[i, ]
+    resampled_fit <- ols(
+        Hb ~ rcs(Ferritin, n_knot),
+        data = sample,
+        x = TRUE,
+        y = TRUE
+    )
+    resampled_saddle <- find_saddle(resampled_fit, max = T)
+    return(resampled_saddle$x)
+}
+
+obj <- boot(data = data, statistic = boot_saddle, R = 10000, n_knot = selected_knot)
+saveRDS(obj, file = "~/who_ferritin_comment/data/first_rcs_boot.rds")
+invalid_indices <- which(obj$t == 0)
+
+boot_ci <- boot.ci(obj, type = "bca", exclude = invalid_indices)$bca
+```
+
