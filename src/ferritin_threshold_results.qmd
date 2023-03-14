@@ -288,21 +288,9 @@ selected_knot <- AIC_df %>%
 selected_knot
 ```
 
-We will now bootstrap a confidence interval for the saddle point (if one exists).
+We will now bootstrap a confidence interval for the saddle point (if one exists). This may take a while.
 
 ```{r}
-boot_saddle <- function(data, n_knot, i) {
-    sample <- data[i, ]
-    resampled_fit <- ols(
-        Hb ~ rcs(Ferritin, n_knot),
-        data = sample,
-        x = TRUE,
-        y = TRUE
-    )
-    resampled_saddle <- find_saddle(resampled_fit, max = T)
-    return(resampled_saddle$x)
-}
-
 obj <- boot(data = data, statistic = boot_saddle, R = 10000, n_knot = selected_knot)
 saveRDS(obj, file = "~/who_ferritin_comment/data/first_rcs_boot.rds")
 invalid_indices <- which(obj$t == 0)

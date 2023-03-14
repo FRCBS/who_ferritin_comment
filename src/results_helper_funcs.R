@@ -26,6 +26,18 @@ find_saddle <- function(fit, start = 0, stop = 50, interval_length = 10, max = T
     }
 }
 
+boot_saddle <- function(data, n_knot, i) {
+    sample <- data[i, ]
+    resampled_fit <- ols(
+        Hb ~ rcs(Ferritin, n_knot),
+        data = sample,
+        x = TRUE,
+        y = TRUE
+    )
+    resampled_saddle <- find_saddle(resampled_fit, max = T)
+    return(resampled_saddle$x)
+}
+
 
 plot_rcs <- function(data, fit, n_knot, zoom = T) {
 
