@@ -43,3 +43,6 @@ vignettes/*.pdf
 /results
 *.rdata
 *.rds
+
+# Quarto embedded files
+/*_files/
