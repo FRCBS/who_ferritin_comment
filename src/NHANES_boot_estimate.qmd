@@ -5,6 +5,11 @@ format: html
 
 ```{r}
 #| label: setup
+FIGUREPATH <- "~/who_ferritin_comment/results/figures/"
+knots <- 3:25
+response <- "Hemoglobin"
+zoom <- T
+boot_n <- 1000
 ```
 
 ```{r}
@@ -13,126 +18,179 @@ format: html
 #| message: false
 #| warning: false
 
-library(nhanesA)
+#source("~/who_ferritin_comment/src/results_helper_funcs.R")
+source("~/who_ferritin_comment/src/functions.R")
 library(dplyr)
+library(rms)
+library(mcp)
+library(boot)
+library(ggExtra)
 ```
+
+## Load data
 
 ```{r}
-#| label: load-data
-#| code-summary: Load data
-#| message: false
-#| warning: false
-
-# Do this only if the data doesn't yet exist on our drive
-if (!file.exists("~/who_ferritin_comment/data/NHANES_variables_filtered.rds")) {
-
-# "-- using cross-sectional NHANES data from 2003-06, 2007-10, 2015-18"
-# I think this maps to  C, D, E, F and I, J for DEMO (demographic) and RHQ (reproductive)
-# All the others map to D, E, F and I, J, but not to C, because 2003-2004 was somehow different
-# We'll capture everything mappable and then treat 2003-2004 separately
-suffix_complete <- c("C", "D", "E", "F", "I", "J")
-suffix_incomplete <- c("D", "E", "F", "I", "J")
-demographics_complete <- bind_rows(lapply(suffix_complete, function(s) nhanes(paste0("DEMO_", s))))
-pregnancy_complete <- bind_rows(lapply(suffix_complete, function(s) nhanes(paste0("RHQ_", s))))
-ferritin_incomplete <- bind_rows(lapply(suffix_incomplete, function(s) nhanes(paste0("FERTIN_", s))))
-sTfR_incomplete <- bind_rows(lapply(suffix_incomplete, function(s) nhanes(paste0("TFR_", s))))
-CRP_incomplete <- bind_rows(lapply(suffix_incomplete, function(s) nhanes(paste0("CRP_", s))))
-blood_incomplete <- bind_rows(lapply(suffix_incomplete, function(s) nhanes(paste0("CBC_", s))))
-biopro_incomplete <- bind_rows(lapply(suffix_incomplete, function(s) nhanes(paste0("BIOPRO_", s))))
-
-# Select only variables of interest
-# SEQN: identifier
-# RIDAGEYR: Age in years
-# RIAGENDR: Gender, 1 Male, 2 Female, . missing
-# RIDEXPRG: Pregnancy status at Exam, 1 Yes, 2 No, 3, Unsure, . Missing
-# LBXFER: Ferritin ng/mL
-# LBXTFR: sTfR mg/L
-# LBXWBCSI: White blood cell count, 1000 cells/uL
-# LBXHGB: Hemoglobin, g/dL
-# LBXCRP: CRP mg/dL
-# LBXSASSI: Aspartate aminotransferase (AST) U/L
-# LBXSATSI: Alanine aminotransferase (ALT) U/L
-
-demo <- demographics_complete %>% 
-    select(SEQN, RIDAGEYR, RIAGENDR, RIDEXPRG)
-# preg <- pregnancy_complete %>% 
-#     select(SEQN, RHD143)
-fer_incomplt <- ferritin_incomplete %>% 
-    select(SEQN, LBXFER)
-stfr_incomplt <- sTfR_incomplete %>% 
-    select(SEQN, LBXTFR)
-blood_incomplt <- blood_incomplete %>% 
-    select(SEQN, LBXWBCSI, LBXHGB)
-CRP_incomplt <- CRP_incomplete %>% 
-    select(SEQN, LBXCRP)
-biopro_incomplt <- biopro_incomplete %>% 
-    select(SEQN, LBXSASSI, LBXSATSI)
-
-# For the 2003-2004 data we have the following tables:
-# ferritin & stfr: L06TFR_C
-# biochem profile: L40_C
-# blood: L25_C
-# CRP: L11_C
-blood_C <- nhanes("L25_C") %>% select(SEQN, LBXWBCSI, LBXHGB)
-biopro_C <- nhanes("L40_C") %>% select(SEQN, LBXSASSI, LBXSATSI)
-CRP_C <- nhanes("L11_C") %>% select(SEQN, LBXCRP)
-fer_tfr_C <- nhanes("L06TFR_C") %>% select(SEQN, LBDFER, LBXTFR) %>% rename(LBXFER = LBDFER)
-fer_C <- fer_tfr_C[, c("SEQN", "LBXFER")]
-stfr_C <- fer_tfr_C[, c("SEQN", "LBXTFR")]
-
-# Make incomplete variables whole
-fer <- bind_rows(fer_C, fer_incomplt)
-stfr <- bind_rows(stfr_C, stfr_incomplt)
-blood <- bind_rows(blood_C, blood_incomplt)
-CRP <- bind_rows(CRP_C, CRP_incomplt)
-biopro <- bind_rows(biopro_C, biopro_incomplt)
-
-# Join everything by SEQN
-unfiltered_variables <- demo %>% 
-    left_join(fer, by = "SEQN") %>% 
-    left_join(stfr, by = "SEQN") %>% 
-    left_join(blood, by = "SEQN") %>% 
-    left_join(CRP, by = "SEQN") %>% 
-    left_join(biopro, by = "SEQN")
-
-# Rename columns for readability
-unfiltered_renamed <- unfiltered_variables %>%
-  rename(
-    age = RIDAGEYR,
-    gender = RIAGENDR,
-    pregnant = RIDEXPRG,
-    ferritin = LBXFER,
-    sTfR = LBXTFR,
-    wbc = LBXWBCSI,
-    hemoglobin = LBXHGB,
-    CRP = LBXCRP,
-    AST = LBXSASSI,
-    ALT = LBXSATSI
-  )
-
-# Save full set
-saveRDS(unfiltered_renamed, "~/who_ferritin_comment/data/NHANES_variables_unfiltered.rds")
-
-# Filter to match Mei & Addo
-filtered_data <- unfiltered_renamed %>%
-  filter(age >= 15 & age <= 49,
-         gender == 2,
-         pregnant == 2,
-         !is.na(ferritin) & !is.na(sTfR) & !is.na(hemoglobin) & !is.na(wbc) & !is.na(CRP) & !is.na(AST) & !is.na(ALT), # Exclude missing measurements
-         wbc <= 10, # Exclude individuals with infection (WBC > 10 x 10^9/L)
-         ALT <= 70,
-         AST <= 70, # Exclude if possible liver disease
-         CRP <= 5 # Exclude non-pregnant women with inflammation
-    )
-
-# Save filtered
-saveRDS(filtered_data, "~/who_ferritin_comment/data/NHANES_variables_filtered.rds")
-
-} else {
-    data <- readRDS("~/who_ferritin_comment/data/NHANES_variables_filtered.rds")
-    }
-
-
+# Load data
+# Naming assumptions:
+# Ferritin, Hemoglobin, sTfR
+data <- readRDS("~/who_ferritin_comment/data/NHANES_variables_filtered.rds")
 ```
 
-**TODO: ** We only get 4,588 non-pregnant women. Mei & Addo have 7,498. Why?
+## Test RCS model selection
+
+```{r}
+# label: test-rcs-knots
+#| message: false
+#| warning: false
+#| fig-align: center
+
+data_full <- data
+data <- data %>% select(Ferritin, as.name(response))
+# set datadist
+dd <- datadist(data)
+options(datadist = "dd")
+
+investigate_RCS(data, response, knots, zoom, FIGUREPATH)
+```
+
+## Bootstrap knot selection
+
+```{r}
+# label: boot-select-knot_n
+#| message: false
+#| warning: false
+#| fig-align: center
+
+# The function boot_knot_selection is defined in functions.R
+if (!file.exists(paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_knots_", boot_n, "_bootobj.rds"))) {
+    boot_knots <- boot(data = data, statistic = boot_knot_selection, R = boot_n, response = response, knots = knots)
+    boot_knot_ci <- boot.ci(boot_knots, type = "perc") # BCa not computable on discrete data with this tight interval
+    saveRDS(boot_knots, paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_knots_", boot_n, "_bootobj.rds"))
+    saveRDS(boot_knot_ci, paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_knot_ci_", boot_n, "_boot_ci.rds"))
+} else {
+    boot_knots <- readRDS(paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_knots_", boot_n, "_bootobj.rds"))
+    boot_knot_ci <- readRDS(paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_knot_ci_", boot_n, "_boot_ci.rds"))
+    }
+
+boot_df <- data.frame(t = boot_knots$t) %>% 
+    mutate(within_ci = (t >= boot_knot_ci$percent[4] & t <= boot_knot_ci$percent[5]))
+
+bootknot_ci_p <- ggplot(data = boot_df, aes(x = t, y = ..count../sum(..count..), fill = within_ci)) + 
+    geom_bar() +
+    theme_minimal() +
+    labs(x = "Selected number of knots",
+         y = "Frequency",
+         fill = "Within CI")
+
+ggsave(paste0("~/who_ferritin_comment/results/figures/", response, "_rcs_boot_knot_distr.pdf"), bootknot_ci_p, width = 8, height = 6, device = cairo_pdf)
+
+bootknot_ci_p
+
+selected_knot_n <- boot_knots$t0
+```
+
+## Bootstrap threshold
+
+Now use selected knot number to bootstrap saddle shenanigans
+
+```{r}
+# label: boot-find-saddle
+#| message: false
+#| warning: false
+#| fig-align: center
+
+# The function boot_saddle  is defined in functions.R
+if (!file.exists(paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_saddle_", boot_n, "_bootobj.rds"))) {
+    boot_saddle_t <- boot(data = data, statistic = boot_saddle, R = boot_n, response = response, knot_n = selected_knot_n)
+    invalid_indices <- which(boot_saddle_t$t == 0)
+    boot_saddle_ci <- boot.ci(boot_saddle_t, type = "perc", exclude = invalid_indices)
+    saveRDS(boot_knots, paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_saddle_", boot_n, "_bootobj.rds"))
+    saveRDS(boot_saddle_ci, paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_saddle_ci_", boot_n, "_boot_ci.rds"))
+} else {
+    boot_knots <- readRDS(paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_saddle_", boot_n, "_bootobj.rds"))
+    boot_saddle_ci <- readRDS(paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_saddle_ci_", boot_n, "_boot_ci.rds"))
+    }
+
+paste0("Bootstrapped saddle point estimate is computable in ", round((1 - length(invalid_indices)/length(boot_saddle_t$t)) * 100, 2), "% of iterations.")
+
+fit <- ols(Hemoglobin ~  rcs(Ferritin, selected_knot_n), data = data, x = T, y = T)
+
+rcs_final_p <- plot_rcs(data, fit, n_knot = selected_knot_n, zoom = T, FIGUREPATH = NULL) +
+    annotate('rect', xmin = boot_saddle_ci$percent[4], xmax = boot_saddle_ci$percent[5], ymin = -Inf, ymax = Inf, alpha = 0.2, fill = 'black') +
+    labs(subtitle = paste0("Saddle point: ", round(boot_saddle_ci$t0, 2), " μg/L [", round(boot_saddle_ci$percent[4], 2), ", ", round(boot_saddle_ci$percent[5], 2), "]"))
+
+ggsave(paste0(FIGUREPATH, response, "_rcs_final.pdf"), rcs_final_p, width = 8, height = 6, device = cairo_pdf)
+
+rcs_final_p
+
+rcs_final_saddle_density_p <-
+    ggplot(data = data.frame(t = boot_saddle_t$t), aes(x = t)) +
+    geom_density() +
+    theme_minimal() +
+    labs(x = "Saddle point",
+         y = "Density")
+
+ggsave(paste0(FIGUREPATH, response, "_rcs_final_saddle_density.pdf"), rcs_final_saddle_density_p, width = 8, height = 6, device = cairo_pdf)
+
+rcs_final_saddle_density_p
+```
+
+
+## Bayesian breakpoint analysis
+
+### 1 breakpoint
+```{r}
+concat_data <- data %>% 
+    filter(Ferritin <= 100)
+
+# Specify model
+baye_1bp_spec <- list(Hemoglobin ~ Ferritin,
+                      ~ 0 + Ferritin)
+
+# Fit
+baye_1bp_fit <- mcp(baye_1bp_spec, 
+               data = concat_data,
+               adapt = 100,
+               iter = 50,
+               chains = 4,
+               cores = 4)
+
+saveRDS(baye_1bp_fit, paste0("~/who_ferritin_comment/results/", response, "_bayesian_1bp.rds"))
+
+# Plot
+bay1_p <- plot(baye_1bp_fit) +
+    theme_minimal() +
+    coord_cartesian(xlim = c(0, 100))
+
+ggsave(paste0(FIGUREPATH, response, "_bay1bp.pdf"), bay1_p, width = 8, height = 6, device = cairo_pdf)
+
+bay1_p
+```
+
+### 2 breakpoints
+```{r}
+# Specify model
+baye_2bp_spec <- list(Hemoglobin ~ Ferritin,
+                      ~ 0 + Ferritin,
+                      ~ 1 + Ferritin)
+
+# Fit
+baye_2bp_fit <- mcp(baye_2bp_spec, 
+               data = concat_data,
+               adapt = 100,
+               iter = 50,
+               chains = 4,
+               cores = 4)
+
+saveRDS(baye_2bp_fit, paste0("~/who_ferritin_comment/results/", response, "_bayesian_2bp.rds"))
+
+# Plot
+bay2_p <- plot(baye_2bp_fit) +
+    theme_minimal() +
+    coord_cartesian(xlim = c(0, 100)) 
+
+ggsave(paste0(FIGUREPATH, response, "_bay2bp.pdf"), bay2_p, width = 8, height = 6, device = cairo_pdf)
+
+bay2_p
+```
+
