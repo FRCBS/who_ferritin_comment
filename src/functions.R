@@ -219,7 +219,7 @@ boot_knot_selection <- function(data, response, knots, i) {
     return(selected_knot)
 }
 
-boot_saddle <- function(data, response, knot_n, i) {
+boot_saddle_estimate <- function(data, response, knot_n, i) {
     sample <- data[i, ]
     resampled_fit <- ols(
         as.formula(sprintf("%s ~ rcs(Ferritin, %s)", response, knot_n)),

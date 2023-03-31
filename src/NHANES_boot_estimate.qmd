@@ -1,11 +1,14 @@
 ---
-title: "NHANES tests"
+title: "Ferritin ID Thresholds"
 format: html
 ---
 
 ```{r}
 #| label: setup
 FIGUREPATH <- "~/who_ferritin_comment/results/figures/"
+BOOTPATH <- "~/who_ferritin_comment/results/boot/"
+DATAPATH <- "~/who_ferritin_comment/data/"
+MODELPATH <- "~/who_ferritin_comment/results/models/"
 knots <- 3:25
 response <- "Hemoglobin"
 zoom <- T
@@ -14,17 +17,17 @@ boot_n <- 1000
 
 ```{r}
 #| label: libraries
+#| code-fold: true
 #| code-summary: Libraries
 #| message: false
 #| warning: false
 
-#source("~/who_ferritin_comment/src/results_helper_funcs.R")
 source("~/who_ferritin_comment/src/functions.R")
 library(dplyr)
 library(rms)
 library(mcp)
 library(boot)
-library(ggExtra)
+library(scam)
 ```
 
 ## Load data
@@ -33,16 +36,21 @@ library(ggExtra)
 # Load data
 # Naming assumptions:
 # Ferritin, Hemoglobin, sTfR
-data <- readRDS("~/who_ferritin_comment/data/NHANES_variables_filtered.rds")
+data <- readRDS(paste0(DATAPATH, "NHANES_variables_filtered.rds"))
 ```
 
 ## Test RCS model selection
 
+(If plots are too small due to layout settings, you may change the chunk option `layout-ncol: 4` to 3, 2, or 1. You may also view these plots by accessing your FIGUREPATH, or by right-clicking here and selecting _Open image in new tab_.)
+
 ```{r}
-# label: test-rcs-knots
+#| label: test-rcs-knots
+#| code-fold: true
+#| code-summary: Visualize RCS knots
 #| message: false
 #| warning: false
 #| fig-align: center
+#| layout-ncol: 4
 
 data_full <- data
 data <- data %>% select(Ferritin, as.name(response))
@@ -56,20 +64,22 @@ investigate_RCS(data, response, knots, zoom, FIGUREPATH)
 ## Bootstrap knot selection
 
 ```{r}
-# label: boot-select-knot_n
+#| label: boot-select-knot_n
+#| code-fold: true
+#| code-summary: Select optimum number of knots via bootstrapping and AIC
 #| message: false
 #| warning: false
 #| fig-align: center
 
 # The function boot_knot_selection is defined in functions.R
-if (!file.exists(paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_knots_", boot_n, "_bootobj.rds"))) {
+if (!file.exists(paste0(BOOTPATH, response, "_rcs_knots_", boot_n, "_bootobj.rds"))) {
     boot_knots <- boot(data = data, statistic = boot_knot_selection, R = boot_n, response = response, knots = knots)
     boot_knot_ci <- boot.ci(boot_knots, type = "perc") # BCa not computable on discrete data with this tight interval
-    saveRDS(boot_knots, paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_knots_", boot_n, "_bootobj.rds"))
-    saveRDS(boot_knot_ci, paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_knot_ci_", boot_n, "_boot_ci.rds"))
+    saveRDS(boot_knots, paste0(BOOTPATH, response, "_rcs_knots_", boot_n, "_bootobj.rds"))
+    saveRDS(boot_knot_ci, paste0(BOOTPATH, response, "_rcs_knot_ci_", boot_n, "_boot_ci.rds"))
 } else {
-    boot_knots <- readRDS(paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_knots_", boot_n, "_bootobj.rds"))
-    boot_knot_ci <- readRDS(paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_knot_ci_", boot_n, "_boot_ci.rds"))
+    boot_knots <- readRDS(paste0(BOOTPATH, response, "_rcs_knots_", boot_n, "_bootobj.rds"))
+    boot_knot_ci <- readRDS(paste0(BOOTPATH, response, "_rcs_knot_ci_", boot_n, "_boot_ci.rds"))
     }
 
 boot_df <- data.frame(t = boot_knots$t) %>% 
@@ -82,40 +92,45 @@ bootknot_ci_p <- ggplot(data = boot_df, aes(x = t, y = ..count../sum(..count..),
          y = "Frequency",
          fill = "Within CI")
 
-ggsave(paste0("~/who_ferritin_comment/results/figures/", response, "_rcs_boot_knot_distr.pdf"), bootknot_ci_p, width = 8, height = 6, device = cairo_pdf)
+ggsave(paste0(FIGUREPATH, response, "_rcs_boot_knot_distr.pdf"), bootknot_ci_p, width = 8, height = 6, device = cairo_pdf)
 
 bootknot_ci_p
 
 selected_knot_n <- boot_knots$t0
+
+# Final RCS fit
+rcs_fit <- ols( as.formula(sprintf("%s ~ rcs(Ferritin, %s)", response, selected_knot_n)), data = data, x = T, y = T)
+saveRDS(rcs_fit, paste0(MODELPATH, "rcs_final.rds"))
 ```
 
 ## Bootstrap threshold
 
-Now use selected knot number to bootstrap saddle shenanigans
+Now use selected knot number to bootstrap saddle estimates
 
 ```{r}
-# label: boot-find-saddle
+#| label: boot-find-saddle
+#| code-fold: true
+#| code-summary: Find estimates for saddle point via bootstrapping
 #| message: false
 #| warning: false
 #| fig-align: center
 
 # The function boot_saddle  is defined in functions.R
-if (!file.exists(paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_saddle_", boot_n, "_bootobj.rds"))) {
-    boot_saddle_t <- boot(data = data, statistic = boot_saddle, R = boot_n, response = response, knot_n = selected_knot_n)
-    invalid_indices <- which(boot_saddle_t$t == 0)
-    boot_saddle_ci <- boot.ci(boot_saddle_t, type = "perc", exclude = invalid_indices)
-    saveRDS(boot_knots, paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_saddle_", boot_n, "_bootobj.rds"))
-    saveRDS(boot_saddle_ci, paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_saddle_ci_", boot_n, "_boot_ci.rds"))
+if (!file.exists(paste0(BOOTPATH, response, "_rcs_saddle_", boot_n, "_bootobj.rds"))) {
+    boot_saddle <- boot(data = data, statistic = boot_saddle_estimate, R = boot_n, response = response, knot_n = selected_knot_n)
+    invalid_indices <- which(boot_saddle$t == 0)
+    boot_saddle_ci <- boot.ci(boot_saddle, type = "perc", exclude = invalid_indices)
+    saveRDS(boot_saddle, paste0(BOOTPATH, response, "_rcs_saddle_", boot_n, "_bootobj.rds"))
+    saveRDS(boot_saddle_ci, paste0(BOOTPATH, response, "_rcs_saddle_ci_", boot_n, "_boot_ci.rds"))
 } else {
-    boot_knots <- readRDS(paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_saddle_", boot_n, "_bootobj.rds"))
-    boot_saddle_ci <- readRDS(paste0("~/who_ferritin_comment/results/boot/", response, "_rcs_saddle_ci_", boot_n, "_boot_ci.rds"))
+    boot_saddle <- readRDS(paste0(BOOTPATH, response, "_rcs_saddle_", boot_n, "_bootobj.rds"))
+    boot_saddle_ci <- readRDS(paste0(BOOTPATH, response, "_rcs_saddle_ci_", boot_n, "_boot_ci.rds"))
+    invalid_indices <- which(boot_saddle$t == 0)
     }
 
-paste0("Bootstrapped saddle point estimate is computable in ", round((1 - length(invalid_indices)/length(boot_saddle_t$t)) * 100, 2), "% of iterations.")
+paste0("Bootstrapped saddle point estimate is computable in ", round((1 - length(invalid_indices)/length(boot_saddle$t)) * 100, 2), "% of iterations.")
 
-fit <- ols(Hemoglobin ~  rcs(Ferritin, selected_knot_n), data = data, x = T, y = T)
-
-rcs_final_p <- plot_rcs(data, fit, n_knot = selected_knot_n, zoom = T, FIGUREPATH = NULL) +
+rcs_final_p <- plot_rcs(data, rcs_fit, n_knot = selected_knot_n, zoom = T, FIGUREPATH = NULL) +
     annotate('rect', xmin = boot_saddle_ci$percent[4], xmax = boot_saddle_ci$percent[5], ymin = -Inf, ymax = Inf, alpha = 0.2, fill = 'black') +
     labs(subtitle = paste0("Saddle point: ", round(boot_saddle_ci$t0, 2), " μg/L [", round(boot_saddle_ci$percent[4], 2), ", ", round(boot_saddle_ci$percent[5], 2), "]"))
 
@@ -124,7 +139,7 @@ ggsave(paste0(FIGUREPATH, response, "_rcs_final.pdf"), rcs_final_p, width = 8, h
 rcs_final_p
 
 rcs_final_saddle_density_p <-
-    ggplot(data = data.frame(t = boot_saddle_t$t), aes(x = t)) +
+    ggplot(data = data.frame(t = boot_saddle$t), aes(x = t)) +
     geom_density() +
     theme_minimal() +
     labs(x = "Saddle point",
@@ -138,59 +153,138 @@ rcs_final_saddle_density_p
 
 ## Bayesian breakpoint analysis
 
+We limit our data to here to Ferritin <= 100, otherwise the 2 breakpoint version will place the second breakpoint way beyond it. **This decision is a source of bias.**
+
 ### 1 breakpoint
 ```{r}
+#| label: bayesian-bp1
+#| code-fold: true
+#| code-summary: Bayesian breakpoint analysis, 1 breakpoint
+#| message: false
+#| warning: false
+#| fig-align: center
+
 concat_data <- data %>% 
     filter(Ferritin <= 100)
 
-# Specify model
-baye_1bp_spec <- list(Hemoglobin ~ Ferritin,
-                      ~ 0 + Ferritin)
+if (!file.exists(paste0(MODELPATH, response, "_bayesian_1bp.rds"))) {
+    # Specify model
+    if (response == "Hemoglobin") {
+        baye_1bp_spec <- list(Hemoglobin ~ Ferritin,
+                              ~ 0 + Ferritin)
+    }
+    if (response == "sTfR") {
+        baye_1bp_spec <- list(sTfR ~ Ferritin,
+                              ~ 0 + Ferritin)
+    }
+    
+    # Fit
+    baye_1bp_fit <- mcp(baye_1bp_spec, 
+                   data = concat_data,
+                   adapt = 500,
+                   iter = 500,
+                   chains = 4,
+                   cores = 4)
+    
+    saveRDS(baye_1bp_fit, paste0(MODELPATH, response, "_bayesian_1bp.rds"))
+} else {
+    baye_1bp_fit <- readRDS(paste0(MODELPATH, response, "_bayesian_1bp.rds"))
+    }
 
-# Fit
-baye_1bp_fit <- mcp(baye_1bp_spec, 
-               data = concat_data,
-               adapt = 100,
-               iter = 50,
-               chains = 4,
-               cores = 4)
-
-saveRDS(baye_1bp_fit, paste0("~/who_ferritin_comment/results/", response, "_bayesian_1bp.rds"))
+summary(baye_1bp_fit)
 
 # Plot
 bay1_p <- plot(baye_1bp_fit) +
     theme_minimal() +
     coord_cartesian(xlim = c(0, 100))
 
+posterior_check_p <- pp_check(baye_1bp_fit)
+
+convergence_check_p <- plot_pars(baye_1bp_fit, regex_pars = "cp_")
+
 ggsave(paste0(FIGUREPATH, response, "_bay1bp.pdf"), bay1_p, width = 8, height = 6, device = cairo_pdf)
+ggsave(paste0(FIGUREPATH, response, "_bay1bp_ppcheck.pdf"), posterior_check_p, width = 8, height = 6, device = cairo_pdf)
+ggsave(paste0(FIGUREPATH, response, "_bay1bp_convcheck.pdf"), convergence_check_p, width = 8, height = 6, device = cairo_pdf)
 
 bay1_p
+posterior_check_p
+convergence_check_p
 ```
 
 ### 2 breakpoints
 ```{r}
-# Specify model
-baye_2bp_spec <- list(Hemoglobin ~ Ferritin,
-                      ~ 0 + Ferritin,
-                      ~ 1 + Ferritin)
+#| label: bayesian-bp2
+#| code-fold: true
+#| code-summary: Bayesian breakpoint analysis, 2 breakpoints
+#| message: false
+#| warning: false
+#| fig-align: center
 
-# Fit
-baye_2bp_fit <- mcp(baye_2bp_spec, 
-               data = concat_data,
-               adapt = 100,
-               iter = 50,
-               chains = 4,
-               cores = 4)
+if (!file.exists(paste0(MODELPATH, response, "_bayesian_2bp.rds"))) {
+    # Specify model
+    if (response == "Hemoglobin") {
+        baye_2bp_spec <- list(Hemoglobin ~ Ferritin,
+                              ~ 0 + Ferritin,
+                              ~ 1 + Ferritin)
+    }
+    if (response == "sTfR") {
+        baye_2bp_spec <- list(sTfR ~ Ferritin,
+                              ~ 0 + Ferritin,
+                              ~ 1 + Ferritin)
+    }
+    
+    # Fit
+    baye_2bp_fit <- mcp(baye_2bp_spec, 
+                   data = concat_data,
+                   adapt = 500,
+                   iter = 500,
+                   chains = 4,
+                   cores = 4)
+    
+    saveRDS(baye_2bp_fit, paste0(MODELPATH, response, "_bayesian_2bp.rds"))
+} else {
+    baye_2bp_fit <- readRDS(paste0(MODELPATH, response, "_bayesian_2bp.rds"))
+}
 
-saveRDS(baye_2bp_fit, paste0("~/who_ferritin_comment/results/", response, "_bayesian_2bp.rds"))
+summary(baye_2bp_fit)
 
 # Plot
 bay2_p <- plot(baye_2bp_fit) +
     theme_minimal() +
-    coord_cartesian(xlim = c(0, 100)) 
+    coord_cartesian(xlim = c(0, 100))
+
+posterior_check_p <- pp_check(baye_2bp_fit)
+
+convergence_check_p <- plot_pars(baye_2bp_fit, regex_pars = "cp_")
 
 ggsave(paste0(FIGUREPATH, response, "_bay2bp.pdf"), bay2_p, width = 8, height = 6, device = cairo_pdf)
+ggsave(paste0(FIGUREPATH, response, "_bay2bp.pdf"), posterior_check_p, width = 8, height = 6, device = cairo_pdf)
+ggsave(paste0(FIGUREPATH, response, "_bay2bp.pdf"), convergence_check_p, width = 8, height = 6, device = cairo_pdf)
 
 bay2_p
+posterior_check_p
+convergence_check_p
+```
+
+## Play with `scam`
+
+```{r}
+scamfit <- scam(Hemoglobin ~ s(Ferritin, k = 8, bs = "mpi"), data = concat_data)
+plot(scamfit, residuals = T)
+```
+
+From the supplement of Galetti et al. (2021):
+
+> To identify thresholds, we then used the method of finite differences to estimate the first derivatives of the fitted trend spline from the generalized additive modelling smoother 
+> and we identified the periods in which the estimated rate of change between fitted y and x was statistically significant (i.e. statistically different from zero) by computing the
+> uncertainty around the estimates from 10 000 posterior simulations. At the point on the x-axis where 95% of the posterior simulations are all different from zero for the first
+> derivative, we could identify where the slope between fitted y and x began to be signiicantly positive (or negative).
+
+The issue currently is that we are deliberately choosing to shape restrict the fit to a monotonically increasing curve $\rightarrow$ the derivative can never reach or cross zero, so we'd have to choose an arbitrary number "close to zero" instead, which will be difficult to justify.
+
+```{r}
+d1 <- derivative.scam(scamfit)
+xx <- sort(concat_data$Ferritin, index = TRUE)
+plot(xx$x, d1$d[xx$ix], type = "l")
 ```
 
