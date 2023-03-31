@@ -1,6 +1,8 @@
 ---
 title: "Ferritin ID Thresholds"
-format: html
+format: 
+    html:
+        embed-resources: true
 ---
 
 ```{r}
@@ -41,7 +43,7 @@ data <- readRDS(paste0(DATAPATH, "NHANES_variables_filtered.rds"))
 
 ## Test RCS model selection
 
-(If plots are too small due to layout settings, you may change the chunk option `layout-ncol: 4` to 3, 2, or 1. You may also view these plots by accessing your FIGUREPATH, or by right-clicking here and selecting _Open image in new tab_.)
+(If plots are too small due to layout settings, you may change the chunk option `layout-ncol: 4` to 3, 2, or 1. You may also view these plots by accessing your FIGUREPATH, or by right-clicking and selecting _Open image in new tab_.)
 
 ```{r}
 #| label: test-rcs-knots
@@ -225,12 +227,12 @@ if (!file.exists(paste0(MODELPATH, response, "_bayesian_2bp.rds"))) {
     if (response == "Hemoglobin") {
         baye_2bp_spec <- list(Hemoglobin ~ Ferritin,
                               ~ 0 + Ferritin,
-                              ~ 1 + Ferritin)
+                              ~ 0 + Ferritin)
     }
     if (response == "sTfR") {
         baye_2bp_spec <- list(sTfR ~ Ferritin,
                               ~ 0 + Ferritin,
-                              ~ 1 + Ferritin)
+                              ~ 0 + Ferritin)
     }
     
     # Fit
@@ -280,11 +282,12 @@ From the supplement of Galetti et al. (2021):
 > uncertainty around the estimates from 10 000 posterior simulations. At the point on the x-axis where 95% of the posterior simulations are all different from zero for the first
 > derivative, we could identify where the slope between fitted y and x began to be signiicantly positive (or negative).
 
-The issue currently is that we are deliberately choosing to shape restrict the fit to a monotonically increasing curve $\rightarrow$ the derivative can never reach or cross zero, so we'd have to choose an arbitrary number "close to zero" instead, which will be difficult to justify.
+The issue currently is that we are deliberately choosing to shape restrict the fit to a monotonically increasing curve $\rightarrow$ the derivative can never cross zero, so we'd have to choose an arbitrary number "close to zero" instead, which will be difficult to justify.
 
 ```{r}
 d1 <- derivative.scam(scamfit)
 xx <- sort(concat_data$Ferritin, index = TRUE)
 plot(xx$x, d1$d[xx$ix], type = "l")
 ```
+
 
