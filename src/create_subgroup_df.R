@@ -8,7 +8,7 @@ H2000 <- thldata$h2000
 rm(thldata)
 
 # Rename
-H2000 <- rename(H2000, Ferritin = FERRITIINI, Hb = B_Hb)
+H2000 <- rename(H2000, Ferritin = FERRITIINI, Hemoglobin = B_Hb)
 
 # Apply desired filters
 ## Women | Menstruating
@@ -38,7 +38,7 @@ subgroup_filtered <- subgroup  %>%
     filter(BA10 == 0) %>% # cardiac insufficiency / heart failure
     filter(!(BA26 == 1 & ATC_A10A == 1)) %>% # filter out people who are diabetic AND use insulin
     filter(BA01 < 4) %>% # filter out "Bad" or "Very bad" SRH
-    select(Ferritin, Hb) %>%
+    select(Ferritin, Hemoglobin) %>%
     na.omit()
 
 # Save

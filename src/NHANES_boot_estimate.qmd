@@ -38,7 +38,7 @@ library(scam)
 # Load data
 # Naming assumptions:
 # Ferritin, Hemoglobin, sTfR
-data <- readRDS(paste0(DATAPATH, "NHANES_variables_filtered.rds"))
+data <- readRDS(paste0(DATAPATH, "h2000_menstr_women_apparently_healthy.rds"))
 ```
 
 ## Test RCS model selection
