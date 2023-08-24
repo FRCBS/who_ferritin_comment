@@ -1,0 +1,353 @@
+---
+title: "Load data for deltaHb - ferritin association"
+format: 
+    html:
+        embed-resources: true
+---
+
+# Introduction to the project
+
+For this project, three files are needed: 1. **0_LoadData.qmd:** the current file. This is an example of how to make your datasets. It also includes a description of the variables that are needed, in case you have your own script to make the datasets. 2. 1_Functions: the functions needed for the analysis are defined here. If you follow the variables described in 0_LoadData.qmd, the functions will not need any adjustments. If you do not have the same variables available, functions that do need adjustment are listed below the list of variables in 0_LoadData.qmd. 3. 2_Analysis.qmd: in this file the actual analysis is conducted. This file needs some adjustments, specifically in Chunk 2 (defining your directories) and Chunk 4 (defining some parameters for the analyses).
+
+# Set up of the project
+
+For this project, we have decided to conduct all analyses on 6 different selections of the data, namely:
+
+1.  All available ferritin measurements at follow-up donations,
+2.  Only first follow-up ferritin measurements,
+3.  Only last follow-up ferritin measurements (no later than 4 years since start),
+4.  Only donors of which Hb-level of first donation is available and donors that have been reactivated (did not donate in the past 2 years, for which the new entry Hb level is used as the reference Hb Level),
+5.  Ferritin measured \<=1 year since first donation,
+6.  Ferritin measured \>1 & \<=2 years since first donation.
+
+Below is outlined how these selections were made on the Dutch data. It can be used as a guideline, but not applied to every country's data immediately because of the specifics of blood collection in the Netherlands.
+
+# Initialize
+
+```{r}
+#| label: libraries
+#| code-fold: true
+#| code-summary: Libraries
+#| message: false
+#| warning: false
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(stringr)
+```
+
+We load a donations dataset and a donor dataset and merge them by the common donor ID column (KeyID).
+
+## Donation data
+
+The donation dataset should contain the following columns:
+
+-   **EINnummer**: unique donation identifier
+-   **KeyID**: unique donor identifier
+-   **Geslacht**: sex, M/F
+-   **Donatiedatum**: donation date (yyyy-mm-dd)
+-   **Hb**: hemoglobin (mmol/L)
+-   **Ferritine**: ferritin (ng/mL)
+
+If available, the following variables in the donation data can be helpful or interesting:
+
+-   **Volume**: donation volume (mL)
+-   **Donatiesoortcode**: donation type
+
+## Donor data
+
+The donor dataset should contain the following columns:
+
+-   **KeyID**: unique donor identifier
+
+If available, the following variables in the donation data can be helpful or interesting:
+
+-   **Lengte**: height (cm)
+-   **Gewicht**: weight (kg)
+-   **Geboortedatum**: date of birth (yyyy-mm-dd). To calculate age at donation. Alternatively, age can be used directly.
+-   **Menopausal status**: menstruating or not (y/n). If not available, this variable can be based on age.
+
+```{r}
+#| label: load datasets
+#| code-fold: true
+#| code-summary: datasets
+#| message: false
+#| warning: false
+
+donaties <- readRDS(file = "~/Amber/Data/FerHb/2023-05-22/donaties.rds")
+donors <- readRDS(file = "~/Amber/Data/FerHb/2023-05-12/donors.rds")
+
+data <- merge(donaties, donors, by = "KeyID")
+rm(donaties)
+rm(donors)
+```
+
+# Process
+
+Then we create new variables:
+
+-   **numdon**: donation number (this is the n-th visit, including the new donor intake)
+-   **prev_fer**: ferritin at previous donation (Note: the creation of this variable will possibly take quite a long time)
+-   **RefHb**: reference Hb level, calculated as: mean of first two visits (in our case the new donor intake and measurement at examination before first donation)
+-   **RefDonDate**: date of the reference donation
+-   **numfer**: ferritin measurement number (this is the n-th ferritin measurement)
+
+```{r}
+#| label: new variables
+#| code-fold: true
+#| message: false
+#| warning: false
+
+#numdon, prev_fer & RefDonDate
+data <- data%>%arrange(KeyID, as.Date(Donatiedatum, format="%Y-%m-%d")) %>% mutate(numdon = seq_along(KeyID))%>% group_by(KeyID)%>%arrange(KeyID, by_group=T) %>% mutate(prev_fer = lag(Ferritine, order_by = KeyID), RefDonDate = min(Donatiedatum), prev_DonDate = lag(Donatiedatum, order_by = KeyID))
+
+#RefHb
+ReferenceHb <- data %>%
+  filter(numdon == 1 | numdon == 2) %>%
+  group_by(KeyID) %>% mutate(RefHb = mean(Hb))%>%
+  ungroup()%>%
+  filter(numdon == 1 & !is.na(RefHb))%>%
+  dplyr::select(c(KeyID, RefHb))
+
+data_2 <- merge(data, ReferenceHb, by = "KeyID")
+
+#numfer
+data_3 <- data_2 %>% filter(!is.na(Ferritine)) 
+numfer <- data_3 %>% arrange(KeyID, as.Date(data_3$Donatiedatum, format="%Y-%m-%d")) %>% mutate(numfer = with(data_3, ave(rep(1, nrow(data_3)), KeyID, FUN = seq_along))) %>% select(c(EINnummer, numfer))
+
+data <- merge(data_3, numfer, by = "EINnummer")
+
+rm(data_2)
+rm(data_3)
+rm(ReferenceHb)
+rm(numfer)
+```
+
+We proceed by selecting donations. We also do some more processing.
+
+1.  Select only new donor examinations ("Nieuwe donorkeuring") and whole blood donations ("Volbloed")
+2.  Remove those with a weight below 51 (legal limit to donate), weight above 150 (we assume this is a mistake), and height below 130 (we assume this is a mistake)
+
+The, we add the variables:
+
+-   **Leeftijd**: age (in years)
+-   **BMI**
+-   **LogFer**: log10 ferritin
+-   **DHb**: delta between Hb at current donation and reference Hb
+-   **premenopausal**: whether a woman is still menstruating (because of the lack of information, in the Netherlands this is based on age and not actual menopausal status)
+
+```{r}
+#| label: select donations
+#| code-fold: true
+
+data_1 <- data%>%
+  filter((Donatiesoortcode == "Nieuwe donorkeuring" | Donatiesoortcode == "Volbloed") & !is.na(Hb) & !is.na(Ferritine) & Hb > 0)%>%
+  mutate(Lengte = replace(Lengte, Lengte < 130, NA), 
+         Gewicht = replace(Gewicht, Gewicht >150 | Gewicht < 51, NA))%>%
+  mutate(BMI = Gewicht / ((Lengte/100)*(Lengte/100)), 
+         Leeftijd = round(as.numeric((Donatiedatum-Geboortedatum)/365.25),0), 
+         LogFer = log10(Ferritine), 
+         DHb = Hb - RefHb,
+         premenopausal = case_when(Geslacht == "F" & Leeftijd <=50 ~1, Geslacht == "F" & Leeftijd >50 ~0))%>%
+  filter(!is.na(BMI))
+
+data <- data_1
+rm(data_1)
+rm(data_4)
+```
+
+# Create datasets
+
+We then create the six datasets listed above:
+
+## Dataset 1: All available ferritin measurements at follow-up donations
+
+```{r}
+#| label: create final dataset 1
+#| code-fold: true
+data <- data %>% filter(numdon > 2) #because we want to exclude the two donations on which the Reference Hb was based
+
+currentDate <- format(Sys.time(), "%Y-%m-%d")
+FolderName <- paste("~/Amber/Data/FerHb/",currentDate, sep="")
+dir.create(FolderName)
+
+FileName <- paste(FolderName, "/dataset1.rds",sep="")
+saveRDS(data, file = FileName)
+```
+
+## Dataset 2: Only first follow-up ferritin measurements
+
+```{r}
+#| label: create final dataset 2
+#| code-fold: true
+
+data_2 <- data%>%  filter(numfer == 2)
+FileName <- paste(FolderName, "/dataset2.rds",sep="")
+saveRDS(data_2, file = FileName)
+```
+
+## Dataset 3: Only last follow-up ferritin measurements (no later than 4 years since start)
+
+```{r}
+#| label: create final dataset 3
+#| code-fold: true
+data_3 <- data %>% mutate(within4years = ifelse(as.numeric(Donatiedatum-RefDonDate)<=(365.25*4),1,0)) %>% filter(within4years==1)%>%select(-within4years)
+
+FileName <- paste(FolderName, "/dataset3.rds",sep="")
+saveRDS(data_3, file = FileName)
+```
+
+## Dataset 5: Ferritin measured \<=1 year since first donation
+
+```{r}
+#| label: create final dataset 5
+#| code-fold: true
+
+data_5 <- data %>% mutate(within1year = ifelse(as.numeric(Donatiedatum-RefDonDate)<=365.25,1,0)) %>% filter(within1year==1)%>%select(-within1year)
+
+FileName <- paste(FolderName, "/dataset5.rds",sep="")
+saveRDS(data_5, file = FileName)
+```
+
+## Dataset 6: Ferritin measured \>1 & \<=2 years since first donation
+
+```{r}
+#| label: create final dataset 6
+#| code-fold: true
+
+data_6 <- data %>% mutate(between12year = ifelse(as.numeric(Donatiedatum-RefDonDate)>=365.25&as.numeric(Donatiedatum-RefDonDate)<=(2*365.25),1,0)) %>% filter(between12year==1)%>%select(-between12year)
+
+FileName <- paste(FolderName, "/dataset6.rds",sep="")
+saveRDS(data_6, file = FileName)
+```
+
+## Dataset 4: Only donors of which Hb-level of first donation is available and donors that have been reactivated
+
+Reactived being: did not donate in the past 2 years. The new entry Hb level is used as the reference Hb Level.
+
+```{r}
+#| label: create final dataset 4
+#| code-fold: true
+
+rm(list=ls()) 
+
+donaties <- readRDS(file = "~/Amber/Data/FerHb/2023-05-22/donaties.rds")
+donors <- readRDS(file = "~/Amber/Data/FerHb/2023-05-12/donors.rds")
+
+data <- merge(donaties, donors, by = "KeyID")
+rm(donaties)
+rm(donors)
+
+data <- data%>%arrange(KeyID, as.Date(Donatiedatum, format="%Y-%m-%d")) %>% mutate(numdon = seq_along(KeyID))%>% group_by(KeyID)%>%arrange(KeyID, by_group=T) %>% mutate(prev_fer = lag(Ferritine, order_by = KeyID), RefDonDate = min(Donatiedatum), prev_DonDate = lag(Donatiedatum, order_by = KeyID))
+
+reac_working <- data %>% mutate(reactivated = ifelse(as.numeric(Donatiedatum - prev_DonDate)>(2*365.25),1,0)) %>% filter(reactivated==1) 
+reac_working2 <- reac_working %>%  group_by(KeyID)%>%arrange(KeyID, as.Date(Donatiedatum, format="%Y-%m-%d")) %>% mutate(numrea = seq_along(KeyID))%>%filter(numrea==1)%>% mutate(ReaDat = Donatiedatum) %>% ungroup() %>% select(EINnummer, ReaDat)
+reac_working2b <- reac_working %>%  group_by(KeyID)%>%arrange(KeyID, as.Date(Donatiedatum, format="%Y-%m-%d")) %>% mutate(numrea = seq_along(KeyID))%>%filter(numrea==2)%>% mutate(ReaDat2 = Donatiedatum) %>% ungroup() %>% select(EINnummer, ReaDat2)
+reac_working2c <- reac_working %>%  group_by(KeyID)%>%arrange(KeyID, as.Date(Donatiedatum, format="%Y-%m-%d")) %>% mutate(numrea = seq_along(KeyID))%>%filter(numrea==3)%>% mutate(ReaDat3 = Donatiedatum) %>% ungroup() %>% select(EINnummer, ReaDat3)
+reac_working2d <- reac_working %>%  group_by(KeyID)%>%arrange(KeyID, as.Date(Donatiedatum, format="%Y-%m-%d")) %>% mutate(numrea = seq_along(KeyID))%>%filter(numrea==4)%>% mutate(ReaDat4 = Donatiedatum) %>% ungroup() %>% select(EINnummer, ReaDat4)
+
+reac_working3 <- merge(data, reac_working2, all.x=T, by = "EINnummer")
+reac_working3 <- merge(reac_working3, reac_working2b, all.x=T, by = "EINnummer")
+reac_working3 <- merge(reac_working3, reac_working2c, all.x=T, by = "EINnummer")
+reac_working3 <- merge(reac_working3, reac_working2d, all.x=T, by = "EINnummer")
+
+reac_working4 <- reac_working3 %>% rowwise() %>% mutate(KeyID2 = KeyID, KeyID2 = replace(KeyID2, Donatiedatum >= ReaDat, paste0(KeyID, "a")))%>%ungroup()
+reac_working4 <- reac_working4 %>% rowwise() %>% mutate(KeyID3 = KeyID2, KeyID3 = replace(KeyID3, Donatiedatum >= ReaDat2, paste0(KeyID, "b")))%>%ungroup()
+reac_working4 <- reac_working4 %>% rowwise() %>% mutate(KeyID4 = KeyID3, KeyID4 = replace(KeyID4, Donatiedatum >= ReaDat3, paste0(KeyID, "c")))%>%ungroup()
+reac_working4 <- reac_working4 %>% rowwise() %>% mutate(KeyID5 = KeyID4, KeyID5 = replace(KeyID5, Donatiedatum >= ReaDat4, paste0(KeyID, "d"))) %>%ungroup()
+
+reac_working4 <- reac_working4 %>% select(-KeyID2, -KeyID3, -KeyID4, -ReaDat2, -ReaDat3, -ReaDat4) %>% rename(KeyID_orig = KeyID, KeyID = KeyID5) 
+reac_working4 <- reac_working4 %>% mutate(KeyID = as.factor(KeyID))%>% arrange(KeyID, as.Date(Donatiedatum, format="%Y-%m-%d")) 
+reac_working4$numdon <- with(reac_working4, ave(seq_along(KeyID), KeyID, FUN=seq_along))
+
+#RefHb
+ReferenceHb_reac <- reac_working4 %>%
+  filter(numdon == 1) %>% mutate(RefHb = Hb)%>%
+  filter(numdon == 1 & !is.na(RefHb))%>%
+  dplyr::select(c(KeyID, RefHb))
+
+reac_working5 <- merge(reac_working4, ReferenceHb_reac, by = "KeyID", )
+
+#numfer
+reac_working6 <- reac_working5 %>% filter(!is.na(Ferritine)) 
+numfer <- reac_working6 %>% arrange(KeyID, as.Date(reac_working6$Donatiedatum, format="%Y-%m-%d")) %>% mutate(numfer = with(reac_working6, ave(rep(1, nrow(reac_working6)), KeyID, FUN = seq_along))) %>% select(c(EINnummer, numfer))
+
+reac_working7 <- merge(reac_working6, numfer, by = "EINnummer")
+
+rm(reac_working4)
+rm(reac_working5)
+rm(reac_working6)
+rm(ReferenceHb_reac)
+rm(numfer)
+
+reac_working8 <- reac_working7%>%
+  filter((Donatiesoortcode == "Nieuwe donorkeuring" | Donatiesoortcode == "Volbloed") & !is.na(Hb) & !is.na(Ferritine) & Hb > 0)%>%
+  mutate(Lengte = replace(Lengte, Lengte < 130, NA), 
+         Gewicht = replace(Gewicht, Gewicht >150 | Gewicht < 51, NA))%>%
+  mutate(BMI = Gewicht / ((Lengte/100)*(Lengte/100)), 
+         Leeftijd = round(as.numeric((Donatiedatum-Geboortedatum)/365.25),0), 
+         LogFer = log10(Ferritine), 
+         DHb = Hb - RefHb,
+         premenopausal = case_when(Geslacht == "F" & Leeftijd <=50 ~1, Geslacht == "F" & Leeftijd >50 ~0))%>%
+  filter(!is.na(BMI)) %>% filter(numdon == 1)
+
+rm(reac_working7)
+
+currentDate <- format(Sys.time(), "%Y-%m-%d")
+FolderName <- paste("~/Amber/Data/FerHb/",currentDate, sep="")
+dir.create(FolderName)
+FileName <- paste(FolderName, "/dataset4.rds",sep="")
+saveRDS(reac_working8, file = FileName)
+
+```
+
+## Dataset 7: Only donors that were not on the deferral limit (for the follow up Hb)
+
+```{r}
+#| label: create final dataset 1
+#| code-fold: true
+
+data_7 <- readRDS("~/Amber/Data/FerHb/2023-06-28/dataset1.rds") %>% filter((Geslacht == "F" & (Hb < 7.7 | Hb > 7.9)) | (Geslacht == "M" & (Hb < 8.3 | Hb > 8.5)) ) 
+
+currentDate <- format(Sys.time(), "%Y-%m-%d")
+FolderName <- paste("~/Amber/Data/FerHb/",currentDate, sep="")
+dir.create(FolderName)
+FileName <- paste(FolderName, "/dataset7.rds",sep="")
+saveRDS(data_7, file = FileName)
+```
+
+# Final dataset description
+
+The final dataset you will be using for the analysis should consists of donation records with at least the following variables:
+
+| Name     | Type    | Description                                                                                                                                                                     | Unit   |
+|----------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|
+| KeyID    | String  | Unique donor identifier                                                                                                                                                         | NA     |
+| Hb       | Numeric | Hemoglobin measurement at donation                                                                                                                                              | mmol/L |
+| RefHb    | Numeric | Reference Hb value (at sanquin this is the mean of the first two visits, because they're both pre donation (ever) measurements. If you do one pre-donation measurement, you mi) | mmol/L |
+| Ferritin | Numeric | Ferritin measured at donation                                                                                                                                                   | ng/mL  |
+| Geslacht | Factor  | Donor sex                                                                                                                                                                       | M or F |
+
+The following variables are "nice to have" but not necessary:
+
+| Name             | Type    | Description                                                   | Unit                                | Note                                                                                              |
+|------------------|---------|---------------------------------------------------------------|-------------------------------------|---------------------------------------------------------------------------------------------------|
+| numdon           | Numeric | Donation number (this record is the donor's n-th donation)    | NA                                  |                                                                                                   |
+| Donatiesoortcode | Factor  | Donation type (new donor examination or whole blood donation) | "Volbloed" or "Nieuwe donorkeuring" | In the Netherlands, we do not have double red cell donations. You may also want to include those. |
+| AfgenomenVolume  | Numeric | Donation volume                                               | mL                                  |                                                                                                   |
+| Donor age        | Numeric | Age at donation                                               | Years                               | We use this for creation of the premenopausal variable                                            |
+| premenopausal    | Numeric | Menopausal status (age below/equal to 50 or above 50)         | 0/1                                 | Can also be based on actual menopausal status                                                     |
+| BMI              | Numeric | Body Mass Index                                               | kg/m^2^                             |                                                                                                   |
+
+## Adjustments to functions
+
+### Missing donation volume, age and/or BMI
+
+Donation volume, age and BMI are not absolutely necessary for the analysis. However, if you do not have these variables available, you will have to adjust the functions file (1_Functions.R).
+
+Specifically, you will have to adjust the selecting population functions to exclude these columns (i.e. select_males_only() \[lines 43-44\]; select_females_only() \[lines 77-78\]; select_premenopausal_only() \[lines 111-112\]; select_postmenopausal_only() \[lines 145-146\]).
+
+### Missing age
+
+If you're missing age, this means you were not able to create the premenopausal variable. You will not have to adjust the functions, but it is important to note that in 2_Analysis.qmd, you have to set the parameter for splitting by menopausal status to FALSE (or F).

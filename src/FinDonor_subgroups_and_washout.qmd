@@ -1,0 +1,509 @@
+---
+title: "FinDonor subsets and washouts"
+author: "Esa Turkulainen"
+format: html
+editor: visual
+---
+
+## Settings
+
+```{r}
+#| label: settings-and-libraries
+#| message: false
+#| warning: false
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+## Load data
+
+```{r}
+#| label: load-data
+#| message: false
+#| warning: false
+
+load("~/proj/who_ferritin_comment/data/r02.fd.bd.all.rdata")
+donaties <- output
+load("~/proj/who_ferritin_comment/data/r02ds.donorData.rdata")
+donors <- output; rm(output)
+
+data <- merge(donaties, donors, by = "donor")
+```
+
+## Ensure repeat measurements
+
+Check how many measurements we have per person:
+
+```{r}
+donor_counts <- table(data$donor)
+count_counts <- data.frame(table(donor_counts)); colnames(count_counts) <- c("Count", "Freq")
+ggplot(count_counts, aes(x = Count, y = Freq)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "How many measurements we have per donor in the FinDonor set?")
+
+
+```
+
+Let's drop everyone with only one measurement, since we need at least 2.
+
+```{r}
+#| label: drop-singles
+#| warning: false
+#| message: false
+
+only_multis <- data %>% 
+  group_by(donor) %>% 
+  filter(n() > 1)
+```
+
+Next we want to ensure that for each individual, their measurements happen within the span of 4 years.
+
+```{r}
+#| label: 4-year-window-check
+#| warning: false
+#| message: false
+
+only_multis %>% 
+  group_by(donor) %>% 
+  filter(FirstVisitDate == "Yes" | LastVisitDate == "Yes") %>% 
+  arrange(donor, date) %>% 
+  mutate(timespan = difftime(last(date), first(date))) %>% 
+  select(donor, date, FirstVisitDate, LastVisitDate, timespan) -> temp
+
+ggplot(temp, aes(x = timespan)) +
+  geom_histogram() +
+  theme_minimal() +
+  labs(title = "In what timespan was FinDonor conducted for each subject?",
+       subtitle = paste("Maximum span between first and last measurement was", max(temp$timespan), "days."),
+       x = "Days",
+       y = "Freq")
+
+```
+
+Because none of the times pans exceed 4 years, we don't need to filter out anyone.
+
+#### Remove date, ferritin and Hb NAs
+
+```{r}
+only_multis %>% drop_na(date, Ferritin, Hb) -> only_multis_wo_na
+```
+
+## Apply Washout
+
+The washout periods we'll try are
+
+-   1 year no donations before measurements
+
+    ```{r}
+    washout_1yr <- 365
+    ```
+
+-   2 yeas no donation before measurements
+
+    ```{r}
+    washout_2yr <- 730
+    ```
+
+Muriel has computed a handy variable for this already: DaysToPreviousFB (FB for "Full Blood"). So we will filter only those subjects whose
+
+-   First FD measurement has an associated DaysToPreviousFB \> 365 or \> 730
+
+-   Subsequent FD measurements have no non-FD donations between them
+
+    -   Or if they do, it needs to be separated by `washout_lenght`
+
+-   Note that NA in DaysToPreviousFB should mean that it's their first donation, so we also want those.
+
+### 1 yr washout
+
+```{r}
+only_multis_wo_na %>% 
+  group_by(donor) %>% 
+  arrange(donor, date) %>% 
+  filter(first(DaysToPreviousFB) >= washout_1yr | is.na(first(DaysToPreviousFB))) %>% 
+  mutate(FDspan = difftime(date, lag(date), unit = "days"),
+         consecutiveFD = FDspan == DaysToPreviousFB,
+         over1yr = DaysToPreviousFB >= washout_1yr) %>% 
+  filter(consecutiveFD | over1yr) %>% 
+  filter(n() > 1) -> data_1yr_washout # we introduced new single-obs individuals, so remove them
+
+print(paste0("We're left with ", nrow(data_1yr_washout), " observations."))
+```
+
+### 2 yr washout
+
+```{r}
+only_multis_wo_na %>% 
+  group_by(donor) %>% 
+  arrange(donor, date) %>% 
+  filter(first(DaysToPreviousFB) >= washout_2yr | is.na(first(DaysToPreviousFB))) %>% 
+  mutate(FDspan = difftime(date, lag(date)),
+         consecutiveFD = FDspan == DaysToPreviousFB,
+         over2yr = DaysToPreviousFB >= washout_2yr) %>% 
+  filter(consecutiveFD | over2yr) %>% 
+  filter(n() > 1) -> data_2yr_washout # we introduced new single-obs individuals, so remove them
+
+print(paste0("We're left with ", nrow(data_2yr_washout), " observations."))
+```
+
+It would seem that we only have 4 observations now, so the 2-year washout is not feasible! We will proceed with just two data sets:
+
+-   1yr washout
+
+-   No washout
+
+```{r}
+# path to save subsets
+subsetpath <- "~/proj/who_ferritin_comment/data/FerHb/subsets/"
+```
+
+## Subsets with 1yr washout
+
+-   All
+
+-   Men
+
+-   Women
+
+-   Pre-/post-menopausal women
+
+For all of these, we want
+
+-   All ferritin measurements
+
+-   Only the first follow-up ferritin measurement
+
+-   Only the last follow-up ferritin measurement
+
+-   Ferritin measured \<= 1 year since the "first" measurement
+
+-   Ferritin measured 1 \< x \<= 2 years since the "first" donation
+
+This amounts to 20 different subsets
+
+### Upper level subsets
+
+```{r}
+all <- data_1yr_washout
+men <- data_1yr_washout %>% filter(gender == "Men")
+women <- data_1yr_washout %>% filter(gender == "Women")
+premeno <- women %>% filter(Age <= 50)
+postmeno <- women %>% filter(Age > 50)
+
+print("Upper level subset sizes for 1 yr washout:")
+print(paste0("All: ", nrow(all)))
+print(paste0("Men: ", nrow(men)))
+print(paste0("Women: ", nrow(women)))
+print(paste0("Women premeno: ", nrow(premeno)))
+print(paste0("Women postmeno: ", nrow(postmeno)))
+```
+
+### Lower level subsets
+
+#### All ferritin measurements
+
+```{r}
+saveRDS(all, file = paste0(subsetpath, "1yr_washout_all_all.rds"))
+saveRDS(men, file = paste0(subsetpath, "1yr_washout_men_all.rds"))
+saveRDS(women, file = paste0(subsetpath, "1yr_washout_women_all.rds"))
+saveRDS(premeno, file = paste0(subsetpath, "1yr_washout_premeno_all.rds"))
+saveRDS(postmeno, file = paste0(subsetpath, "1yr_washout_postmeno_all.rds"))
+```
+
+#### Only the first follow-up ferritin measurement
+
+```{r}
+all_1st_followup <- all %>% arrange(donor, date) %>% filter(row_number() < 3)
+men_1st_followup <- men %>% arrange(donor, date) %>% filter(row_number() < 3)
+women_1st_followup <- women %>% arrange(donor, date) %>% filter(row_number() < 3)
+premeno_1st_followup <- premeno %>% arrange(donor, date) %>% filter(row_number() < 3)
+postmeno_1st_followup <- postmeno %>% arrange(donor, date) %>% filter(row_number() < 3)
+
+print("1st follow-up subset sizes for 1 yr washout:")
+print(paste0("All: ", nrow(all_1st_followup)))
+print(paste0("Men: ", nrow(men_1st_followup)))
+print(paste0("Women: ", nrow(women_1st_followup)))
+print(paste0("Women premeno: ", nrow(premeno_1st_followup)))
+print(paste0("Women postmeno: ", nrow(postmeno_1st_followup)))
+
+saveRDS(all_1st_followup, file = paste0(subsetpath, "1yr_washout_all_1stfollowup.rds"))
+saveRDS(men_1st_followup, file = paste0(subsetpath, "1yr_washout_men_1stfollowup.rds"))
+saveRDS(women_1st_followup, file = paste0(subsetpath, "1yr_washout_women_1stfollowup.rds"))
+saveRDS(premeno_1st_followup, file = paste0(subsetpath, "1yr_washout_premeno_1stfollowup.rds"))
+saveRDS(postmeno_1st_followup, file = paste0(subsetpath, "1yr_washout_postmeno_1stfollowup.rds"))
+```
+
+#### Only the last ferritin follow-up measurement
+
+```{r}
+all_last_followup <- all %>% arrange(donor, date) %>% filter(row_number() %in% c(1, n()))
+men_last_followup <- men %>% arrange(donor, date) %>% filter(row_number() %in% c(1, n()))
+women_last_followup <- women %>% arrange(donor, date) %>% filter(row_number() %in% c(1, n()))
+premeno_last_followup <- premeno %>% arrange(donor, date) %>% filter(row_number() %in% c(1, n()))
+postmeno_last_followup <- postmeno %>% arrange(donor, date) %>% filter(row_number() %in% c(1, n()))
+
+print("Last follow-up subset sizes for 1 yr washout:")
+print(paste0("All: ", nrow(all_last_followup)))
+print(paste0("Men: ", nrow(men_last_followup)))
+print(paste0("Women: ", nrow(women_last_followup)))
+print(paste0("Women premeno: ", nrow(premeno_last_followup)))
+print(paste0("Women postmeno: ", nrow(postmeno_last_followup)))
+
+saveRDS(all_last_followup, file = paste0(subsetpath, "1yr_washout_all_lastfollowup.rds"))
+saveRDS(men_last_followup, file = paste0(subsetpath, "1yr_washout_men_lastfollowup.rds"))
+saveRDS(women_last_followup, file = paste0(subsetpath, "1yr_washout_women_lastfollowup.rds"))
+saveRDS(premeno_last_followup, file = paste0(subsetpath, "1yr_washout_premeno_lastfollowup.rds"))
+saveRDS(postmeno_last_followup, file = paste0(subsetpath, "1yr_washout_postmeno_lastfollowup.rds"))
+```
+
+#### Ferritin measurements within 1 year window
+
+```{r}
+all_first_year <- all %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst <= 365) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+men_first_year <- men %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst <= 365) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+women_first_year <- women %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst <= 365) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+premeno_first_year <- premeno %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst <= 365) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+postmeno_first_year <- postmeno %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst <= 365) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+
+print("1yr follow-ups subset sizes for 1 yr washout:")
+print(paste0("All: ", nrow(all_first_year)))
+print(paste0("Men: ", nrow(men_first_year)))
+print(paste0("Women: ", nrow(women_first_year)))
+print(paste0("Women premeno: ", nrow(premeno_first_year)))
+print(paste0("Women postmeno: ", nrow(postmeno_first_year)))
+
+saveRDS(all_first_year, file = paste0(subsetpath, "1yr_washout_all_1yrfollowup.rds"))
+saveRDS(men_first_year, file = paste0(subsetpath, "1yr_washout_men_1yrfollowup.rds"))
+saveRDS(women_first_year, file = paste0(subsetpath, "1yr_washout_women_1yrfollowup.rds"))
+saveRDS(premeno_first_year, file = paste0(subsetpath, "1yr_washout_premeno_1yrfollowup.rds"))
+saveRDS(postmeno_first_year, file = paste0(subsetpath, "1yr_washout_postmeno_1yrfollowup.rds"))
+```
+
+#### Ferritin measurements 1 \< x \<= 2 years
+
+```{r}
+all_1to2_years <- all %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst == 0 | (timeToFirst >= 365 & timeToFirst <= 730)) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+men_1to2_years <- men %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst == 0 | (timeToFirst >= 365 & timeToFirst <= 730)) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+women_1to2_years <- women %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst == 0 | (timeToFirst >= 365 & timeToFirst <= 730)) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+premeno_1to2_years <- premeno %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst == 0 | (timeToFirst >= 365 & timeToFirst <= 730)) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+postmeno_1to2_years <- postmeno %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst == 0 | (timeToFirst >= 365 & timeToFirst <= 730)) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+
+print("Between 1-2yr follow-ups subset sizes for 1 yr washout:")
+print(paste0("All: ", nrow(all_1to2_years)))
+print(paste0("Men: ", nrow(men_1to2_years)))
+print(paste0("Women: ", nrow(women_1to2_years)))
+print(paste0("Women premeno: ", nrow(premeno_1to2_years)))
+print(paste0("Women postmeno: ", nrow(postmeno_1to2_years)))
+
+saveRDS(all_1to2_years, file = paste0(subsetpath, "1yr_washout_all_1-2yrfollowup.rds"))
+saveRDS(men_1to2_years, file = paste0(subsetpath, "1yr_washout_men_1-2yrfollowup.rds"))
+saveRDS(women_1to2_years, file = paste0(subsetpath, "1yr_washout_women_1-2yrfollowup.rds"))
+saveRDS(premeno_1to2_years, file = paste0(subsetpath, "1yr_washout_premeno_1-2yrfollowup.rds"))
+saveRDS(postmeno_1to2_years, file = paste0(subsetpath, "1yr_washout_postmeno_1-2yrfollowup.rds"))
+```
+
+## Subsets without washout
+
+### Upper level subsets
+
+```{r}
+all <- only_multis_wo_na
+men <- only_multis_wo_na %>% filter(gender == "Men")
+women <- only_multis_wo_na %>% filter(gender == "Women")
+premeno <- women %>% filter(Age <= 50)
+postmeno <- women %>% filter(Age > 50)
+
+print("Upper level subset sizes for no washout:")
+print(paste0("All: ", nrow(all)))
+print(paste0("Men: ", nrow(men)))
+print(paste0("Women: ", nrow(women)))
+print(paste0("Women premeno: ", nrow(premeno)))
+print(paste0("Women postmeno: ", nrow(postmeno)))
+```
+
+### Lower level subsets
+
+#### All ferritin measurements
+
+```{r}
+saveRDS(all, file = paste0(subsetpath, "no_washout_all_all.rds"))
+saveRDS(men, file = paste0(subsetpath, "no_washout_men_all.rds"))
+saveRDS(women, file = paste0(subsetpath, "no_washout_women_all.rds"))
+saveRDS(premeno, file = paste0(subsetpath, "no_washout_premeno_all.rds"))
+saveRDS(postmeno, file = paste0(subsetpath, "no_washout_postmeno_all.rds"))
+```
+
+#### Only the first follow-up ferritin measurement
+
+```{r}
+all_1st_followup <- all %>% arrange(donor, date) %>% filter(row_number() < 3)
+men_1st_followup <- men %>% arrange(donor, date) %>% filter(row_number() < 3)
+women_1st_followup <- women %>% arrange(donor, date) %>% filter(row_number() < 3)
+premeno_1st_followup <- premeno %>% arrange(donor, date) %>% filter(row_number() < 3)
+postmeno_1st_followup <- postmeno %>% arrange(donor, date) %>% filter(row_number() < 3)
+
+print("1st follow-up subset sizes for no washout:")
+print(paste0("All: ", nrow(all_1st_followup)))
+print(paste0("Men: ", nrow(men_1st_followup)))
+print(paste0("Women: ", nrow(women_1st_followup)))
+print(paste0("Women premeno: ", nrow(premeno_1st_followup)))
+print(paste0("Women postmeno: ", nrow(postmeno_1st_followup)))
+
+saveRDS(all_1st_followup, file = paste0(subsetpath, "no_washout_all_1stfollowup.rds"))
+saveRDS(men_1st_followup, file = paste0(subsetpath, "no_washout_men_1stfollowup.rds"))
+saveRDS(women_1st_followup, file = paste0(subsetpath, "no_washout_women_1stfollowup.rds"))
+saveRDS(premeno_1st_followup, file = paste0(subsetpath, "no_washout_premeno_1stfollowup.rds"))
+saveRDS(postmeno_1st_followup, file = paste0(subsetpath, "no_washout_postmeno_1stfollowup.rds"))
+```
+
+#### Only the last ferritin follow-up measurement
+
+```{r}
+all_last_followup <- all %>% arrange(donor, date) %>% filter(row_number() %in% c(1, n()))
+men_last_followup <- men %>% arrange(donor, date) %>% filter(row_number() %in% c(1, n()))
+women_last_followup <- women %>% arrange(donor, date) %>% filter(row_number() %in% c(1, n()))
+premeno_last_followup <- premeno %>% arrange(donor, date) %>% filter(row_number() %in% c(1, n()))
+postmeno_last_followup <- postmeno %>% arrange(donor, date) %>% filter(row_number() %in% c(1, n()))
+
+print("Last follow-up subset sizes for no washout:")
+print(paste0("All: ", nrow(all_last_followup)))
+print(paste0("Men: ", nrow(men_last_followup)))
+print(paste0("Women: ", nrow(women_last_followup)))
+print(paste0("Women premeno: ", nrow(premeno_last_followup)))
+print(paste0("Women postmeno: ", nrow(postmeno_last_followup)))
+
+saveRDS(all_last_followup, file = paste0(subsetpath, "no_washout_all_lastfollowup.rds"))
+saveRDS(men_last_followup, file = paste0(subsetpath, "no_washout_men_lastfollowup.rds"))
+saveRDS(women_last_followup, file = paste0(subsetpath, "no_washout_women_lastfollowup.rds"))
+saveRDS(premeno_last_followup, file = paste0(subsetpath, "no_washout_premeno_lastfollowup.rds"))
+saveRDS(postmeno_last_followup, file = paste0(subsetpath, "no_washout_postmeno_lastfollowup.rds"))
+```
+
+#### Ferritin measurements within 1 year window
+
+```{r}
+all_first_year <- all %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst <= 365) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+men_first_year <- men %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst <= 365) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+women_first_year <- women %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst <= 365) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+premeno_first_year <- premeno %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst <= 365) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+postmeno_first_year <- postmeno %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst <= 365) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+
+print("1yr follow-ups subset sizes for no washout:")
+print(paste0("All: ", nrow(all_first_year)))
+print(paste0("Men: ", nrow(men_first_year)))
+print(paste0("Women: ", nrow(women_first_year)))
+print(paste0("Women premeno: ", nrow(premeno_first_year)))
+print(paste0("Women postmeno: ", nrow(postmeno_first_year)))
+
+saveRDS(all_first_year, file = paste0(subsetpath, "no_washout_all_1yrfollowup.rds"))
+saveRDS(men_first_year, file = paste0(subsetpath, "no_washout_men_1yrfollowup.rds"))
+saveRDS(women_first_year, file = paste0(subsetpath, "no_washout_women_1yrfollowup.rds"))
+saveRDS(premeno_first_year, file = paste0(subsetpath, "no_washout_premeno_1yrfollowup.rds"))
+saveRDS(postmeno_first_year, file = paste0(subsetpath, "no_washout_postmeno_1yrfollowup.rds"))
+```
+
+#### Ferritin measurements 1 \< x \<= 2 years
+
+```{r}
+all_1to2_years <- all %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst == 0 | (timeToFirst >= 365 & timeToFirst <= 730)) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+men_1to2_years <- men %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst == 0 | (timeToFirst >= 365 & timeToFirst <= 730)) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+women_1to2_years <- women %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst == 0 | (timeToFirst >= 365 & timeToFirst <= 730)) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+premeno_1to2_years <- premeno %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst == 0 | (timeToFirst >= 365 & timeToFirst <= 730)) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+postmeno_1to2_years <- postmeno %>% 
+  arrange(donor, date) %>% 
+  mutate(timeToFirst = difftime(date, first(date), units = "days")) %>% 
+  filter(timeToFirst == 0 | (timeToFirst >= 365 & timeToFirst <= 730)) %>% 
+  filter(n() > 1) # Remove those who now have only 1 measurement
+
+print("Between 1-2yr follow-ups subset sizes for no washout:")
+print(paste0("All: ", nrow(all_1to2_years)))
+print(paste0("Men: ", nrow(men_1to2_years)))
+print(paste0("Women: ", nrow(women_1to2_years)))
+print(paste0("Women premeno: ", nrow(premeno_1to2_years)))
+print(paste0("Women postmeno: ", nrow(postmeno_1to2_years)))
+
+saveRDS(all_1to2_years, file = paste0(subsetpath, "no_washout_all_1-2yrfollowup.rds"))
+saveRDS(men_1to2_years, file = paste0(subsetpath, "no_washout_men_1-2yrfollowup.rds"))
+saveRDS(women_1to2_years, file = paste0(subsetpath, "no_washout_women_1-2yrfollowup.rds"))
+saveRDS(premeno_1to2_years, file = paste0(subsetpath, "no_washout_premeno_1-2yrfollowup.rds"))
+saveRDS(postmeno_1to2_years, file = paste0(subsetpath, "no_washout_postmeno_1-2yrfollowup.rds"))
+```

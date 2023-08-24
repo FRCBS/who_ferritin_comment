@@ -1,0 +1,178 @@
+---
+title: "Load data for deltaHb - ferritin association"
+format: 
+    html:
+        embed-resources: true
+---
+
+# Initialize
+
+```{r}
+#| label: libraries
+#| code-fold: true
+#| code-summary: Libraries
+#| message: false
+#| warning: false
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(stringr)
+```
+
+We load a donations dataset and a donor dataset and merge them by the common donor ID column (KeyID).
+
+The donation dataset should contain the following columns:
+
+-   **EINnummer**: unique donation identifier
+-   **KeyID**: unique donor identifier
+-   **Geslacht**: sex, M/F
+-   **Geboortedatum**: date of birth (yyyy-mm-dd)
+-   **Donatiedatum**: donation date (yyyy-mm-dd)
+-   **Hb**: hemoglobin (mmol/L)
+-   **Ferritine**: ferritin (ng/mL)
+-   **Donatiesoortcode**: donation type
+
+The donor dataset should contain the following columns:
+
+-   **KeyID**: unique donor identifier
+-   **Lengte**: height (cm)
+-   **Gewicht**: weight (kg)
+
+```{r}
+#| label: load datasets
+#| code-fold: true
+#| code-summary: datasets
+#| message: false
+#| warning: false
+
+# donaties <- readRDS(file = "~/Amber/Data/FerHb/2023-05-22/donaties.rds")
+# donors <- readRDS(file = "~/Amber/Data/FerHb/2023-05-12/donors.rds")
+
+# Load subset
+subsetname <- "no_washout_all_all"
+data <- readRDS(file = paste0("~/proj/who_ferritin_comment/data/FerHb/subsets/", subsetname, ".rds"))
+
+# Rename columns to match the conventions of this script
+data <- data %>% 
+  rename(EINnummer = donationID,
+         KeyID = donor,
+         Geslacht = gender,
+         Geboortedatum = dob,
+         Donatiedatum = date,
+         Ferritine = Ferritin,
+         Donatiesoortcode = donat_phleb,
+         Lengte = height,
+         Gewicht = weight)
+
+# Transform variables for conformity
+data <- data %>% 
+  mutate(Hb = Hb * 0.06195) %>%  # Our Hb measurements are in g/L. This conversion to mmol/L comes from Google + calculator!
+  mutate(Geslacht = as.factor(ifelse(Geslacht == "Men", "M", "F"))) %>% 
+  mutate(Donatiesoortcode = ifelse(Donatiesoortcode == "K", "Volbloed", NA)) %>% 
+  filter(Donatiesoortcode == "Volbloed") %>% mutate(Donatiesoortcode = as.factor(Donatiesoortcode))
+  
+```
+
+# Process
+
+Then we create new variables:
+
+-   **numdon**: donation number (this is the n-th visit, including the new donor intake)
+-   **prev_fer**: ferritin at previous donation (Note: the creation of this variable will possibly take quite a long time)
+-   **RefHb**: reference Hb level, calculated as: mean of first two visits (in our case the new donor intake and measurement at examination before first donation)
+-   **numfer**: ferritin measurement number (this is the n-th ferritin measurement)
+
+```{r}
+#| label: new variables
+#| code-fold: true
+#| message: false
+#| warning: false
+
+#numdon
+data <- data[order(as.Date(data$Donatiedatum, format="%Y-%m-%d")),]
+data$numdon <- with(data, ave(rep(1, nrow(data)), KeyID, FUN = seq_along))
+
+#prev_fer
+data <- data %>% group_by(KeyID)%>%arrange(KeyID, by_group=T) %>% mutate(prev_fer = lag(Ferritine, order_by = KeyID))
+
+#RefHb
+data_1 <- data %>%
+  filter(numdon == 1 | numdon == 2) %>%
+  group_by(KeyID) %>% mutate(RefHb = mean(Hb))
+
+ReferenceHb <- data_1 %>%
+  filter(numdon == 1 & !is.na(RefHb))%>%
+  dplyr::select(c(KeyID, RefHb))
+
+data_2 <- merge(data, ReferenceHb, by = "KeyID")
+
+#numfer
+data_3 <- data_2 %>% filter(!is.na(Ferritine))
+data_3 <- data_3[order(as.Date(data_3$Donatiedatum, format="%Y-%m-%d")),]
+numfer <- data_3 %>% mutate(numfer = with(data_3, ave(rep(1, nrow(data_3)), KeyID, FUN = seq_along))) %>% select(c(EINnummer, numfer))
+
+data_4 <- merge(data_2, numfer, by = "EINnummer")
+```
+
+We proceed by selecting donations. We also do some more processing.
+
+1.  Select only new donor examinations ("Nieuwe donorkeuring") and whole blood donations ("Volbloed")
+2.  Remove those with a weight below 51 (legal limit to donate), weight above 150 (we assume this is a mistake), and height below 130 (we assume this is a mistake)
+
+The, we add the variables:
+
+-   **Leeftijd**: age (in years)
+-   **BMI**
+-   **LogFer**: log10 ferritin
+-   **DHb**: delta between Hb at current donation and reference Hb
+
+```{r}
+#| label: select donations
+#| code-fold: true
+
+data_4 <- data_4%>%
+  filter((Donatiesoortcode == "Nieuwe donorkeuring" | Donatiesoortcode == "Volbloed") & !is.na(Hb) & !is.na(Ferritine) & Hb > 0)%>%
+  mutate(Lengte = replace(Lengte, Lengte < 130, NA), 
+         Gewicht = replace(Gewicht, Gewicht >150 | Gewicht < 51, NA))%>%
+  mutate(BMI = Gewicht / ((Lengte/100)*(Lengte/100)), 
+         Leeftijd = round(as.numeric((Donatiedatum-Geboortedatum)/365.25),0), 
+         LogFer = log10(Ferritine), 
+         DHb = Hb - RefHb)%>%
+  filter(!is.na(BMI))
+```
+
+# Save dataset
+
+```{r}
+#| label: create final datasets
+#| code-fold: true
+
+currentDate <- format(Sys.time(), "%Y-%m-%d")
+FolderName <- paste("/home/esa/proj/who_ferritin_comment/data/FerHb/", currentDate, sep="")
+dir.create(FolderName)
+
+#the full dataset
+FileName <- paste0(FolderName, "/", subsetname, ".rds")
+saveRDS(data_4, file = FileName)
+
+```
+
+# Final dataset description
+
+The final dataset you will be using for the analysis should consists of donation records with at least the following variables:
+
+| Name             | Type    | Description                                                   | Unit                                |
+|------------------|---------|---------------------------------------------------------------|-------------------------------------|
+| KeyID            | String  | Unique donor identifier                                       | NA                                  |
+| Hb               | Numeric | Hemoglobin measurement at donation                            | mmol/L                              |
+| numdon           | Numeric | Donation number (this record is the donor's n-th donation)    | NA                                  |
+| RefHb            | Numeric | Reference Hb value                                            | mmol/L                              |
+| Ferritin         | Numeric | Ferritin measured at donation                                 | ng/mL                               |
+| Geslacht         | Factor  | Donor sex                                                     | M or F                              |
+| Donatiesoortcode | Factor  | Donation type (new donor examination or whole blood donation) | "Volbloed" or "Nieuwe donorkeuring" |
+| AfgenomenVolume  | Numeric | Donation volume                                               | mL                                  |
+| Leeftijd         | Numeric | Donor age                                                     | Years                               |
+| BMI              | Numeric | Body Mass Index                                               | kg/m^2^                             |
+
+Note that donation volume, age and BMI are not absolutely necessary for the analysis. However, if you do not have these variables available, you will have to adjust the functions file (1_Functions.R). Specifically, you will have to adjust select_males_only() and select_females_only().

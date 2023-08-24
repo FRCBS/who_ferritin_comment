@@ -1,0 +1,601 @@
+---
+title: "Analysis of deltaHb - ferritin association"
+format: 
+    html:
+        embed-resources: true
+---
+
+# Initialization
+
+## Load packages
+
+```{r}
+#| label: libraries
+#| code-fold: true
+#| code-summary: Libraries
+#| message: false
+#| warning: false
+
+
+library("Hmisc")
+library("zoo")
+library("mcp") # for bayesian changepoint analysis
+library("rjags")
+library("pracma")
+library("scales")
+library("dplyr")
+#load the functions needed
+source("~/proj/who_ferritin_comment/src/1_Functions_Finland.R")
+```
+
+## Directories
+
+In this part of the code we ask you to define:
+
+-   Your main directory (in which we will create a subdirectory for the bootstrap results and where the functions file is located)
+-   Your data file
+-   The folder to which we export results (more on this later in the document)
+
+```{r}
+#| label: define directory and data file
+#define your main directory
+subsetname <- "no_washout_all_all"
+main_dir <- "~/proj/who_ferritin_comment/data/FerHb" #define your main directory 
+FileToUse <- paste0("~/proj/who_ferritin_comment/data/FerHb/subsets/", subsetname, ".rds") #define the dataset file you want to use for the analysis (1 of 6 datasets we agreed on)
+export_folder <- "results_export" #define the name of the folder you want to export you results to
+```
+
+```{r}
+#| label: create directories & load data + functions
+#| code-fold: true
+setwd(main_dir)  
+# setting up the sub directory for bootstrap results and a folder with today's date
+sub_dir <- "bootstrap_results"
+currentDate <- Sys.Date()
+
+# check if sub directory already exists, otherwise create it 
+if (file.exists(sub_dir)){
+      print("The folder for bootstrap results already exists")
+} else {
+        # create a new sub directory inside
+        # the main path
+        dir.create(file.path(main_dir, sub_dir))
+}
+
+#check if the folder for today's bootstrap results already exists, otherwise create it
+if (file.exists(file.path(sub_dir,currentDate))){
+      print("Today's sub folder already exists")
+} else {
+        # create a new sub directory inside
+        # the main path
+        dir.create(file.path(main_dir, sub_dir,currentDate))
+}
+
+#check if the folder for result export already exists, otherwise create it
+if (file.exists(export_folder)){
+      print("The folder for the result export already exists")
+} else {
+        # create a new sub directory inside
+        # the main path
+        dir.create(file.path(main_dir, export_folder))
+}
+
+
+if (file.exists(file.path(export_folder, currentDate))){
+      print("Today's sub folder already exists")
+} else {
+        # create a new sub directory inside
+        # the main path
+        dir.create(file.path(main_dir, export_folder,currentDate))
+}
+
+if(grepl("dataset1", FileToUse)){FolderDataset <<- "dataset1"} else if (grepl("dataset2", FileToUse)){FolderDataset <<- "dataset2"} else if (grepl("dataset3", FileToUse)){FolderDataset <<- "dataset3"} else if (grepl("dataset4", FileToUse)){FolderDataset <<- "dataset4"} else if (grepl("dataset5", FileToUse)){FolderDataset <<- "dataset5"} else if (grepl("dataset6", FileToUse)){FolderDataset <<- "dataset6"} else (FolderDataset <- format(Sys.time(), "%H_%M"))
+
+if (file.exists(file.path(export_folder, currentDate, FolderDataset))){
+      print("A sub folder with this time stamp already exists")
+} else {
+        # create a new sub directory inside
+        # the main path
+        dir.create(file.path(main_dir, export_folder,currentDate, FolderDataset))
+}
+
+raw_data <- readRDS(FileToUse)
+data <- conform(raw_data) 
+
+#if(!is.factor(data$Geslacht)){data$Geslacht<-as.factor(data$Geslacht)}
+
+
+```
+
+## Parameters
+
+Here you have to define some parameters:
+
+```{r}
+#| label: base parameters
+#| code-fold: false
+#| code-summary: parameters
+#| message: false
+#| warning: false
+
+#plotting and analysis
+menopausal_status <- T # indicate whether you want to additionally split the females by their menopausal status
+
+#simulation
+dobayes<-F         # Indicate whether you want to perform a bayesian changepoint analysis (recommended: F)
+dobootstrap<-T     # Indicate whether you want to perform a bootstrap of the max likelihood estimate for the changepoint (recommended: T)
+printbootstrap<-F  # Indicate whether you want to print the bootstrap results. For readable quarto files this is not recommended (recommended: F) 
+nrbssims<-2       # nr of bootstrapsamples (recommended: 200, if you just want to test the script a low value is recommended (e.g. 2))
+bsseed<-2          # seedvalue for the bootstrap
+
+rollmean_nr<-1000  # nr of samples to use in the rolling maen
+
+#exporting results
+export_files <- T # Indicate whether you want to export the results of the analysis
+proportion <- 0.03 # proportion of your data that you will export. This really depends on how big your data is. We recommend a proportion that will still display the pattern/direction of the data.
+
+# lower and upper limits for the changepoint fit
+# these consist of the intercept, slope, changepoint and standard deviation of the error
+ll=c(-2, 0.005, 0.5, 0.3) # lower limit (recommended: c(-2, 0.005, 0.5, 0.3)) 
+#ll=c(-2, 0.005,  -4, 0.3) # lower limit (recommended: c(-2, 0.005,  -4, 0.3))
+ul=c( 1,     2,   4, 0.9) # upper limit (c( 1,     2,   4, 0.9))
+```
+
+::: {.callout-important appearance="simple"}
+## A note on exporting results
+
+Only jittered values or values derived from analyses are exported.
+
+When exporting the data, the dRefHb value and lFer variables are jittered, all the original values are removed before exporting. Original values are removed from the results of the analysis when exporting. Only the result of the analysis is exported
+
+We export the results so we can, ultimately, combine results from all countries in one graph.
+:::
+
+# Changepoint analysis
+
+```{r, fig.width=7, fig.height=7}
+#| label: changepoint analysis
+#| code-fold: true
+#| code-summary: analysis
+#| message: false
+#| warning: false
+
+### set male dataset for reference
+refdata<-select_males_only()
+refdata<-refdata[order(refdata$lFer),] # order data by lFer
+refdataM<-refdata
+fitdata<-refdata
+title=paste0("Male donors (n=", nrow(refdataM),")", sep="")
+xm<-plotHbFer()
+if(export_files){
+  exportData(refdataM)
+  exportRollmean(rollmean_data)
+  exportSolution(sol_data)
+  }
+
+### set female dataset for reference
+refdata<-select_females_only()
+refdata<-refdata[order(refdata$lFer),] # order data by lFer
+refdataF<-refdata
+fitdata<-refdata
+title=paste0("Female donors (n=", nrow(refdataF), ")", sep="")
+xf<-plotHbFer()
+if(export_files){
+  exportData(refdataF)
+  exportRollmean(rollmean_data)
+  changepoint_data <- rbind(xm, xf)
+  exportSolution(sol_data)}
+
+if(menopausal_status){
+## set premenopausal female dataset for reference
+refdata<-select_premenopausal_only()
+refdata<-refdata[order(refdata$lFer),] # order data by lFer
+refdatapreF<-refdata
+fitdata<-refdata
+title=paste0("Premenopausal donors (n=", nrow(refdatapreF), ")", sep="")
+xpref<-plotHbFer()
+if(export_files){
+  exportData(refdatapreF)
+  exportRollmean(rollmean_data)
+  exportSolution(sol_data)} 
+
+## set postmenopausal female dataset for reference
+refdata<-select_postmenopausal_only()
+refdata<-refdata[order(refdata$lFer),] # order data by lFer
+refdatapostF<-refdata
+fitdata<-refdata
+title=paste0("Postmenopausal donors (n=", nrow(refdatapostF), ")", sep="")
+xpostf<-plotHbFer()
+if(export_files){
+  exportData(refdatapostF)
+  exportRollmean(rollmean_data)
+  exportSolution(sol_data)}
+
+changepoint_data <- rbind(xm, xf, xpref, xpostf)}
+```
+
+# Bootstrap results
+
+## Run bootstrap
+
+Bootstrap will run only if set to T in parameters.
+
+```{r}
+#| label: do bootstrap
+#| code-fold: true
+#| code-summary: bootstrap
+#| message: false
+#| warning: false
+
+if(dobootstrap){
+
+### set male dataset for reference
+refdata<-select_males_only()
+refdata<-refdata[order(refdata$lFer),] 
+nrow(refdata) 
+length(unique(refdata$KeyID)) 
+nrow(refdata)/length(unique(refdata$KeyID)) 
+sum(refdata$Ferritin<=30)/nrow(refdata)
+length(unique(refdata$KeyID[refdata$Ferritin<=30])) 
+length(unique(refdata$KeyID[refdata$Ferritin<=30]))/length(unique(refdata$KeyID))
+
+
+# copy reference dataset for fitting models (and bootstrapping)
+refdataM<-refdata
+#fitdata<-fitdata[1:1000,]
+### plot lFer vs dRefHb
+#xm<-plotHbFer()
+
+### set female dataset for reference
+refdata<-select_females_only()
+refdata<-refdata[order(refdata$lFer),] 
+nrow(refdata) 
+length(unique(refdata$KeyID)) 
+nrow(refdata)/length(unique(refdata$KeyID)) 
+sum(refdata$Ferritin<=30)/nrow(refdata) 
+length(unique(refdata$KeyID[refdata$Ferritin<=30])) 
+length(unique(refdata$KeyID[refdata$Ferritin<=30]))/length(unique(refdata$KeyID)) 
+
+# copy reference dataset for fitting models (and bootstrapping)
+refdataF<-refdata
+#fitdata<-fitdata[1:1000,]
+#xf<-plotHbFer()
+if(menopausal_status){
+### set premenopausal dataset for reference
+refdata<-select_premenopausal_only()
+refdata<-refdata[order(refdata$lFer),] 
+nrow(refdata) 
+length(unique(refdata$KeyID)) 
+nrow(refdata)/length(unique(refdata$KeyID)) 
+sum(refdata$Ferritin<=30)/nrow(refdata) 
+length(unique(refdata$KeyID[refdata$Ferritin<=30])) 
+length(unique(refdata$KeyID[refdata$Ferritin<=30]))/length(unique(refdata$KeyID)) 
+
+# copy reference dataset for fitting models (and bootstrapping)
+refdatapreF<-refdata
+#fitdata<-fitdata[1:1000,]
+#xpref<-plotHbFer()
+
+### set postmenopausal dataset for reference
+refdata<-select_postmenopausal_only()
+refdata<-refdata[order(refdata$lFer),] 
+nrow(refdata) 
+length(unique(refdata$KeyID)) 
+nrow(refdata)/length(unique(refdata$KeyID)) 
+sum(refdata$Ferritin<=30)/nrow(refdata) 
+length(unique(refdata$KeyID[refdata$Ferritin<=30])) 
+length(unique(refdata$KeyID[refdata$Ferritin<=30]))/length(unique(refdata$KeyID)) 
+
+# copy reference dataset for fitting models (and bootstrapping)
+refdatapostF<-refdata
+#fitdata<-fitdata[1:1000,]
+#xpostf<-plotHbFer()
+}
+rm(data)
+while (!is.null(dev.list())) dev.off()
+
+for (bsseed in 1:5) {
+  
+if(printbootstrap){  print("")
+  print(paste("seed =",bsseed))
+  print("")}
+  
+  ### bootstrap this result
+  refdata<-refdataM
+  fitdata<-refdataM
+  bsxm<-c()
+  nr<-nrow(fitdata)
+  set.seed(bsseed)
+  for (i in 1:nrbssims){
+    fitdata<-refdata[sample(1:nr, nr, replace = T), c("lFer","dRefHb")]
+    bsr<-fminsearch(fitf, xm, lower=ll, upper=ul, method="Hooke-Jeeves")
+    bsxm<-rbind(bsxm, c(bsr$xmin, bsr$convergence, bsr$info$iterations, SolutionOk(bsr$xmin)))
+    # print(paste(i,":",paste(bsr$xmin, collapse = " "), bsr$convergence, bsr$info$iterations))
+    if(printbootstrap){print(paste(i,":",paste(bsxm[i,], collapse = " ")))}
+  }
+  MaleBootstrapResultFile<-paste0("~/proj/who_ferritin_comment/data/FerHb/bootstrap_results/", Sys.Date(), "/", subsetname, "_", "Male_Bootstrap_", nrbssims,"_samp_",bsseed, "seed.RDS")
+  saveRDS(bsxm, file=MaleBootstrapResultFile)
+}
+
+for (bsseed in 1:5) {
+  
+if(printbootstrap){  print("")
+  print(paste("seed =",bsseed))
+  print("")}
+  
+  ### now bootstrap this result
+  refdata<-refdataF
+  fitdata<-refdataF
+  bsxf<-c()
+  nr<-nrow(fitdata)
+  set.seed(bsseed)
+  for (i in 1:nrbssims){
+    fitdata<-refdata[sample(1:nr, nr, replace = T), c("lFer","dRefHb")]
+    bsr<-fminsearch(fitf, xf, lower=ll, upper=ul, method="Hooke-Jeeves")
+    bsxf<-rbind(bsxf, c(bsr$xmin, bsr$convergence, bsr$info$iterations, SolutionOk(bsr$xmin)))
+    # print(paste(i,":",paste(bsr$xmin, collapse = " "), bsr$convergence, bsr$info$iterations))
+    if(printbootstrap){print(paste(i,":",paste(bsxf[i,], collapse = " ")))}
+  }
+  FemaleBootstrapResultFile <-paste0("~/proj/who_ferritin_comment/data/FerHb/bootstrap_results/", Sys.Date(), "/", subsetname, "_", "Female_Bootstrap_",nrbssims,"_samp_", bsseed, "seed.RDS")
+  saveRDS(bsxf, file=FemaleBootstrapResultFile)
+  
+}
+if(menopausal_status){
+  for (bsseed in 1:5) {
+  
+if(printbootstrap){  print("")
+  print(paste("seed =",bsseed))
+  print("")
+  }
+  ### now bootstrap this result
+  refdata<-refdatapreF
+  fitdata<-refdatapreF
+  bsxpref<-c()
+  nr<-nrow(fitdata)
+  set.seed(bsseed)
+  for (i in 1:nrbssims){
+    fitdata<-refdata[sample(1:nr, nr, replace = T), c("lFer","dRefHb")]
+    bsr<-fminsearch(fitf, xpref, lower=ll, upper=ul, method="Hooke-Jeeves")
+    bsxpref<-rbind(bsxpref, c(bsr$xmin, bsr$convergence, bsr$info$iterations, SolutionOk(bsr$xmin)))
+    # print(paste(i,":",paste(bsr$xmin, collapse = " "), bsr$convergence, bsr$info$iterations))
+    if(printbootstrap){print(paste(i,":",paste(bsxpref[i,], collapse = " ")))}
+  }
+  PremenopausalBootstrapResultFile<-paste0("~/proj/who_ferritin_comment/data/FerHb/bootstrap_results/", Sys.Date(), "/", subsetname, "_", "Premenopausal_Bootstrap_",nrbssims,"_samp_", bsseed, "seed.RDS")
+  saveRDS(bsxpref, file=PremenopausalBootstrapResultFile)
+  
+  }
+  for (bsseed in 1:5) {
+  
+if(printbootstrap){  print("")
+  print(paste("seed =",bsseed))
+  print("")}
+  
+  ### now bootstrap this result
+  refdata<-refdatapostF
+  fitdata<-refdatapostF
+  bsxpostf<-c()
+  nr<-nrow(fitdata)
+  set.seed(bsseed)
+  for (i in 1:nrbssims){
+    fitdata<-refdata[sample(1:nr, nr, replace = T), c("lFer","dRefHb")]
+    bsr<-fminsearch(fitf, xpostf, lower=ll, upper=ul, method="Hooke-Jeeves")
+    bsxpostf<-rbind(bsxpostf, c(bsr$xmin, bsr$convergence, bsr$info$iterations, SolutionOk(bsr$xmin)))
+    # print(paste(i,":",paste(bsr$xmin, collapse = " "), bsr$convergence, bsr$info$iterations))
+    if(printbootstrap){print(paste(i,":",paste(bsxpostf[i,], collapse = " ")))}
+  }
+  PostmenopausalBootstrapResultFile<-paste0("~/proj/who_ferritin_comment/data/FerHb/bootstrap_results/", Sys.Date(), "/", subsetname, "_", "Postmenopausal_Bootstrap_",nrbssims,"_samp_", bsseed, "seed.RDS")
+  saveRDS(bsxpostf, file=PostmenopausalBootstrapResultFile)
+  
+}
+}
+
+}
+```
+
+## Read and combine previous bootstrap results
+
+This is necessary because the bootstrap procedure is split into 200 iterations per sample, to enhance speed.
+
+```{r, fig.width=7, fig.height=7}
+#| label: combine bootstrap results
+#define here your main directory
+
+#this will load bootstrap files from today's folder, adjust if you want to load them from another folder by adjusting the sub_dir/date or hard coding the path of the folder that you want to load bootstrap files from
+load_bootstrap_files(file.path(main_dir, sub_dir, currentDate))
+
+#females:
+bsxf<-readRDS(females_bootstrap[1])
+for (i in 2:bsseed){
+  bsxf<<-rbind(bsxf, readRDS(females_bootstrap[i]))
+}
+
+FemaleBootstrapResultFile<-paste0(file.path(main_dir, sub_dir, currentDate), "/", subsetname, "_", "Female_Bootstrap_", bsseed*nrbssims, "samp_combinedseed.RDS", sep="")
+saveRDS(bsxf, file=FemaleBootstrapResultFile)
+
+#males:
+bsxm<-readRDS(males_bootstrap[1])
+for (i in 2:bsseed){
+  bsxm<<-rbind(bsxm, readRDS(males_bootstrap[i]))
+}
+
+MaleBootstrapResultFile<-paste0(file.path(main_dir, sub_dir, currentDate), "/", subsetname, "_", "Male_Bootstrap_", bsseed*nrbssims, "samp_combinedseed.RDS", sep="")
+saveRDS(bsxm, file=MaleBootstrapResultFile)
+
+if(menopausal_status){
+  #premenopausal females:
+bsxpref<-readRDS(premenopausal_bootstrap[1])
+for (i in 2:bsseed){
+  bsxpref<<-rbind(bsxpref, readRDS(premenopausal_bootstrap[i]))
+}
+
+PremenopausalBootstrapResultFile<-paste0(file.path(main_dir, sub_dir, currentDate), "/", subsetname, "_", "Premenopausal_Bootstrap_", bsseed*nrbssims, "samp_combinedseed.RDS", sep="")
+saveRDS(bsxpref, file=PremenopausalBootstrapResultFile)
+  #postmenopausal females
+bsxpostf<-readRDS(postmenopausal_bootstrap[1])
+for (i in 2:bsseed){
+  bsxpostf<<-rbind(bsxpostf, readRDS(postmenopausal_bootstrap[i]))
+}
+
+PostmenopausalBootstrapResultFile<-paste0(file.path(main_dir, sub_dir, currentDate), "/", subsetname, "_", "Postmenopausal_Bootstrap_", bsseed*nrbssims, "samp_combinedseed.RDS", sep="")
+saveRDS(bsxpostf, file=PostmenopausalBootstrapResultFile)
+}
+```
+
+## Plot bootstrap results
+
+```{r, fig.width=7, fig.height=7}
+#| label: plot bootstrap results
+#males
+refdata<-refdataM
+refdata<-refdata[order(refdata$lFer),] # order data by lFer
+fitdata<-refdata
+title=paste0("Male donors (n=", nrow(refdataM),")", sep="")
+
+if(file.exists(MaleBootstrapResultFile)){
+  
+  # Read bootstrap results
+  bsxm<-readRDS(MaleBootstrapResultFile)
+
+  # Calculate and plot 95% confidence intervals for the bootstrap
+  # 95% confidence intervals for the lines
+  x<-seq(0,5, .01)
+  bse<-c()
+  for(i in 1:nrow(bsxm)) bse<-rbind(bse,yvalsfitted(x,bsxm[i,]))
+  llimfit<-apply(bse, 2, function(x) quantile(x, 0.025))
+  ulimfit<-apply(bse, 2, function(x) quantile(x, 0.975))
+  CIcp<-quantile(bsxm[,3], c(.025,0.975))
+  CIsm<-list(x=x, llimfit=llimfit, ulimfit=ulimfit, CIcp=CIcp)
+  plotHbFer(CIsm)
+  
+  # plot distribution of the changepoint
+  plot(density(bsxm[,3], bw=.003))
+
+paste0("CI of changepoint: [",   10^quantile(bsxm[,3], c(.025,0.975))[1], ",",   10^quantile(bsxm[,3], c(.025,0.975))[2], "]", " CI of slope: [", quantile(bsxm[,2], c(.025,0.975))[1], ",", quantile(bsxm[,2], c(.025,0.975))[2], "]")
+if(export_files){
+llimexportM <<- cbind(CIsm$x, CIsm$llimfit, "M")
+ulimexportM <<- cbind(CIsm$x, CIsm$ulimfit, "M")
+CIcpexportM <<- c(CIsm$CIcp[1], xm[3],CIsm$CIcp[2], "M")}
+}
+
+#females
+refdata<-refdataF
+refdata<-refdata[order(refdata$lFer),] # order data by lFer
+fitdata<-refdata
+title=paste0("Female donors (n=", nrow(refdataF), ")", sep="")
+
+if(file.exists(FemaleBootstrapResultFile)){
+
+  # Read bootstrap results
+  bsxf<-readRDS(FemaleBootstrapResultFile)
+  
+  # Calculate and plot 95% confidence intervals for the bootstrap
+  # 95% confidence intervals for the lines
+  x<-seq(0,5, .01)
+  bse<-c()
+  for(i in 1:nrow(bsxf)) bse<-rbind(bse,yvalsfitted(x,bsxf[i,]))
+  llimfit<-apply(bse, 2, function(x) quantile(x, 0.025))
+  ulimfit<-apply(bse, 2, function(x) quantile(x, 0.975))
+  CIcp<-quantile(bsxf[,3], c(.025,0.975))
+  CIsf<-list(x=x, llimfit=llimfit, ulimfit=ulimfit, CIcp=CIcp)
+  plotHbFer(CIsf)
+  
+  # plot distribution of the changepoint
+  plot(density(bsxf[,3], bw=.003))
+
+paste0("CI of changepoint: [",   10^quantile(bsxf[,3], c(.025,0.975))[1], ",",   10^quantile(bsxf[,3], c(.025,0.975))[2], "]", " CI of slope: [", quantile(bsxf[,2], c(.025,0.975))[1], ",", quantile(bsxf[,2], c(.025,0.975))[2], "]")
+
+if(export_files){llimexportF <<- cbind(CIsf$x, CIsf$llimfit, "F")
+saveRDS(rbind(llimexportM, llimexportF), file = paste0(file.path(main_dir, export_folder,currentDate,FolderDataset), "/llim_export.rds"))
+ulimexportF <<- cbind(CIsf$x, CIsf$ulimfit, "F")
+saveRDS(rbind(ulimexportM, ulimexportF), file = paste0(file.path(main_dir, export_folder,currentDate,FolderDataset), "/ulim_export.rds"))
+CIcpexportF <<- c(CIsf$CIcp[1], xf[3],CIsf$CIcp[2], "F")
+saveRDS(rbind(CIcpexportM, CIcpexportF), file = paste0(file.path(main_dir, export_folder,currentDate,FolderDataset), "/CIcp_export.rds"))}
+} 
+
+if(menopausal_status){
+#premenopausal females
+refdata<-refdatapreF
+refdata<-refdata[order(refdata$lFer),] # order data by lFer
+fitdata<-refdata
+title=paste0("Premenopausal donors (n=", nrow(refdatapreF), ")", sep="")
+
+if(file.exists(PremenopausalBootstrapResultFile)){
+
+  # Read bootstrap results
+  bsxpref<-readRDS(PremenopausalBootstrapResultFile)
+  
+  # Calculate and plot 95% confidence intervals for the bootstrap
+  # 95% confidence intervals for the lines
+  x<-seq(0,5, .01)
+  bse<-c()
+  for(i in 1:nrow(bsxpref)) bse<-rbind(bse,yvalsfitted(x,bsxpref[i,]))
+  llimfit<-apply(bse, 2, function(x) quantile(x, 0.025))
+  ulimfit<-apply(bse, 2, function(x) quantile(x, 0.975))
+  CIcp<-quantile(bsxpref[,3], c(.025,0.975))
+  CIspref<-list(x=x, llimfit=llimfit, ulimfit=ulimfit, CIcp=CIcp)
+  plotHbFer(CIspref)
+  
+  # plot distribution of the changepoint
+  plot(density(bsxpref[,3], bw=.003))
+
+paste0("CI of changepoint: [",   10^quantile(bsxpref[,3], c(.025,0.975))[1], ",",   10^quantile(bsxpref[,3], c(.025,0.975))[2], "]", " CI of slope: [", quantile(bsxpref[,2], c(.025,0.975))[1], ",", quantile(bsxpref[,2], c(.025,0.975))[2], "]")
+
+if(export_files){llimexportpreF <<- cbind(CIspref$x, CIspref$llimfit, "preF")
+ulimexportpreF <<- cbind(CIspref$x, CIspref$ulimfit, "preF")
+CIcpexportpreF <<- c(CIspref$CIcp[1], xf[3],CIspref$CIcp[2], "preF")}
+
+}
+}
+
+if(menopausal_status){
+#postmenopausal females
+refdata<-refdatapostF
+refdata<-refdata[order(refdata$lFer),] # order data by lFer
+fitdata<-refdata
+title=paste0("Postmenopausal donors (n=", nrow(refdatapostF), ")", sep="")
+
+if(file.exists(PostmenopausalBootstrapResultFile)){
+
+  # Read bootstrap results
+  bsxpostf<-readRDS(PostmenopausalBootstrapResultFile)
+  
+  # Calculate and plot 95% confidence intervals for the bootstrap
+  # 95% confidence intervals for the lines
+  x<-seq(0,5, .01)
+  bse<-c()
+  for(i in 1:nrow(bsxpostf)) bse<-rbind(bse,yvalsfitted(x,bsxpostf[i,]))
+  llimfit<-apply(bse, 2, function(x) quantile(x, 0.025))
+  ulimfit<-apply(bse, 2, function(x) quantile(x, 0.975))
+  CIcp<-quantile(bsxpostf[,3], c(.025,0.975))
+  CIspostf<-list(x=x, llimfit=llimfit, ulimfit=ulimfit, CIcp=CIcp)
+  plotHbFer(CIspostf)
+  
+  # plot distribution of the changepoint
+  plot(density(bsxpostf[,3], bw=.003))
+
+paste0("CI of changepoint: [",   10^quantile(bsxpostf[,3], c(.025,0.975))[1], ",",   10^quantile(bsxpostf[,3], c(.025,0.975))[2], "]", " CI of slope: [", quantile(bsxpostf[,2], c(.025,0.975))[1], ",", quantile(bsxpostf[,2], c(.025,0.975))[2], "]")
+
+if(export_files){llimexportpostF <- cbind(CIspostf$x, CIspostf$llimfit, "postF")
+saveRDS(rbind(llimexportM, llimexportF, llimexportpreF, llimexportpostF), file = paste0(file.path(main_dir, export_folder,currentDate,FolderDataset), "/llim_export.rds"))
+ulimexportpostF <- cbind(CIspostf$x, CIspostf$ulimfit, "postF")
+saveRDS(rbind(ulimexportM, ulimexportF, ulimexportpreF, ulimexportpostF), file = paste0(file.path(main_dir, export_folder,currentDate,FolderDataset), "/ulim_export.rds"))
+CIcpexportpostF <- c(CIspostf$CIcp[1], xf[3],CIspostf$CIcp[2], "postF")
+saveRDS(rbind(CIcpexportM, CIcpexportF, CIcpexportpreF, CIcpexportpostF), file = paste0(file.path(main_dir, export_folder,currentDate,FolderDataset), "/CIcp_export.rds"))}
+}
+}
+```
+
+# Exported data
+
+Below I've given a description of what we're exporting. If you've put T in the export_files indicator (line 130), the following files are exported:
+
+-   **export_data.rds:** this contains jittered lFer and dRefHb values and the sex of a proportion of your data (that you have defined)
+-   **rollmean_export.rds:** this contains 2 variables to make the rollmean line. The lFer values are jittered, sex is original, and the rollmean value is the mean of 500 records before and after a certain record so this will not contain original values.
+-   **sol_export.rds:** this contains 3 rows to plot the solution of the changepoint. There are no original values here.
+-   **llim_export.rds:** this contains 501 data points to make the upper limit of the changepoint solution. There are no original values here.
+-   **ulim_export.rds:** this contains 501 data points to make the lower limit of the changepoint solution. There are no original values here.
+-   **CIcp_export.rds:** this contains the changepoint and it's CI per sex. There are no original values here.
+
+Please send your exported data to Amber so we can make plots containing all 4 countries.
+
+Files are saved in a folder with the name of the dataset used for the analysis if you've named your datasets dataset1 to dataset6. If you've named them differently, the folder with results will be named after the start date of the analysis. If that is the case for you, to make it more clear for me when collecting all results: please change this to the name of the dataset you're using (dataset 1 to 6).

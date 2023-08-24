@@ -4,25 +4,25 @@ library(tidyr)
 library(ggplot2)
 
 # Load data on individual donations
-load("~/CRP_enrichment/data/r02.fd.bd.all.rdata") # outputs an object called "output" into the environment
-donations <- output
-
-# Load FinDonor demographic data
-load("~/CRP_enrichment/data/r02ds.donorData.rdata") # outputs an object called "output" into the environment
-findonor <- output
-
-# Combine the FinDonor datasets
-FinDonor <- left_join(donations, findonor, by = "donor")
-
-# Group and arrange
-FinDonor <- FinDonor %>%
-    group_by(donor) %>%
-    arrange(donor, date) %>%
-    drop_na(date)
-
+# load("~/CRP_enrichment/data/r02.fd.bd.all.rdata") # outputs an object called "output" into the environment
+# donations <- output
+# 
+# # Load FinDonor demographic data
+# load("~/CRP_enrichment/data/r02ds.donorData.rdata") # outputs an object called "output" into the environment
+# findonor <- output
+# 
+# # Combine the FinDonor datasets
+# FinDonor <- left_join(donations, findonor, by = "donor")
+# 
+# # Group and arrange
+# FinDonor <- FinDonor %>%
+#     group_by(donor) %>%
+#     arrange(donor, date) %>%
+#     drop_na(date)
+data <- readRDS("~/proj/who_ferritin_comment/data/FerHb/subsets/no_washout_all_all.rds")
 
 # Create Hb reference diff column
-wRef <- FinDonor %>%
+wRef <- data %>%
     mutate(reference_delta = Hb - first(Hb)) %>%
     mutate(fer_log10 = log10(Ferritin)) %>%
     select(donor, reference_delta, fer_log10, Gender, QR79) %>%
@@ -83,6 +83,17 @@ bp_fit_postmeno <- mcp(
     cores = 4
 )
 
+# Fit all
+bp_fit_all <- mcp(
+  bp_spec,
+  data = wRef,
+  adapt = 500,
+  iter = 500,
+  chains = 4,
+  inits = list(cp_1 = 1.45),
+  cores = 4
+)
+
 # Plot men
 plot(bp_fit_men) +
     geom_vline(xintercept = 1.38, linetype = "dashed", size = 1) +
@@ -121,3 +132,13 @@ plot(bp_fit_postmeno) +
          subtitle = "Breakpoint estimate: ??",
          x = "Ferritin (log10)",
          y = "Hb difference to first measurement")
+
+# Plot all
+plot(bp_fit_all) +
+  theme_minimal() +
+  #geom_vline(xintercept = 1.4, linetype = "dashed", color = "red") +
+  scale_x_continuous(breaks = seq(0, 3, 0.1)) +
+  labs(title = "FinDonor | All",
+       subtitle = "Breakpoint estimate: ??",
+       x = "Ferritin (log10)",
+       y = "Hb difference to first measurement")

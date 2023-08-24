@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.2.475">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Analysis of deltaHb - ferritin association</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1.6em;
+  vertical-align: middle;
+}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="2_Analysis_Finland_files/libs/clipboard/clipboard.min.js"></script>
+<script src="2_Analysis_Finland_files/libs/quarto-html/quarto.js"></script>
+<script src="2_Analysis_Finland_files/libs/quarto-html/popper.min.js"></script>
+<script src="2_Analysis_Finland_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="2_Analysis_Finland_files/libs/quarto-html/anchor.min.js"></script>
+<link href="2_Analysis_Finland_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="2_Analysis_Finland_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="2_Analysis_Finland_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="2_Analysis_Finland_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="2_Analysis_Finland_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Analysis of deltaHb - ferritin association</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<section id="initialization" class="level1">
+<h1>Initialization</h1>
+<section id="load-packages" class="level2">
+<h2 class="anchored" data-anchor-id="load-packages">Load packages</h2>
+<div class="cell">
+<details>
+<summary>Libraries</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">"Hmisc"</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">"zoo"</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">"mcp"</span>) <span class="co"># for bayesian changepoint analysis</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">"rjags"</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">"pracma"</span>)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">"scales"</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">"dplyr"</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">#load the functions needed</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="st">"~/proj/who_ferritin_comment/src/1_Functions_Finland.R"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="directories" class="level2">
+<h2 class="anchored" data-anchor-id="directories">Directories</h2>
+<p>In this part of the code we ask you to define:</p>
+<ul>
+<li>Your main directory (in which we will create a subdirectory for the bootstrap results and where the functions file is located)</li>
+<li>Your data file</li>
+<li>The folder to which we export results (more on this later in the document)</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co">#define your main directory</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>subsetname <span class="ot">&lt;-</span> <span class="st">"1yr_washout_all_all"</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>main_dir <span class="ot">&lt;-</span> <span class="st">"~/proj/who_ferritin_comment/data/FerHb"</span> <span class="co">#define your main directory </span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>FileToUse <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"~/proj/who_ferritin_comment/data/FerHb/subsets/"</span>, subsetname, <span class="st">".rds"</span>) <span class="co">#define the dataset file you want to use for the analysis (1 of 6 datasets we agreed on)</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>export_folder <span class="ot">&lt;-</span> <span class="st">"results_export"</span> <span class="co">#define the name of the folder you want to export you results to</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">setwd</span>(main_dir)  </span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># setting up the sub directory for bootstrap results and a folder with today's date</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>sub_dir <span class="ot">&lt;-</span> <span class="st">"bootstrap_results"</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>currentDate <span class="ot">&lt;-</span> <span class="fu">Sys.Date</span>()</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co"># check if sub directory already exists, otherwise create it </span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(sub_dir)){</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>      <span class="fu">print</span>(<span class="st">"The folder for bootstrap results already exists"</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>        <span class="co"># create a new sub directory inside</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>        <span class="co"># the main path</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>        <span class="fu">dir.create</span>(<span class="fu">file.path</span>(main_dir, sub_dir))</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "The folder for bootstrap results already exists"</code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">#check if the folder for today's bootstrap results already exists, otherwise create it</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(<span class="fu">file.path</span>(sub_dir,currentDate))){</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>      <span class="fu">print</span>(<span class="st">"Today's sub folder already exists"</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="co"># create a new sub directory inside</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="co"># the main path</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>        <span class="fu">dir.create</span>(<span class="fu">file.path</span>(main_dir, sub_dir,currentDate))</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Today's sub folder already exists"</code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co">#check if the folder for result export already exists, otherwise create it</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(export_folder)){</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>      <span class="fu">print</span>(<span class="st">"The folder for the result export already exists"</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        <span class="co"># create a new sub directory inside</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        <span class="co"># the main path</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        <span class="fu">dir.create</span>(<span class="fu">file.path</span>(main_dir, export_folder))</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "The folder for the result export already exists"</code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(<span class="fu">file.path</span>(export_folder, currentDate))){</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>      <span class="fu">print</span>(<span class="st">"Today's sub folder already exists"</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>        <span class="co"># create a new sub directory inside</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>        <span class="co"># the main path</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>        <span class="fu">dir.create</span>(<span class="fu">file.path</span>(main_dir, export_folder,currentDate))</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Today's sub folder already exists"</code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">grepl</span>(<span class="st">"dataset1"</span>, FileToUse)){FolderDataset <span class="ot">&lt;&lt;-</span> <span class="st">"dataset1"</span>} <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">grepl</span>(<span class="st">"dataset2"</span>, FileToUse)){FolderDataset <span class="ot">&lt;&lt;-</span> <span class="st">"dataset2"</span>} <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">grepl</span>(<span class="st">"dataset3"</span>, FileToUse)){FolderDataset <span class="ot">&lt;&lt;-</span> <span class="st">"dataset3"</span>} <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">grepl</span>(<span class="st">"dataset4"</span>, FileToUse)){FolderDataset <span class="ot">&lt;&lt;-</span> <span class="st">"dataset4"</span>} <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">grepl</span>(<span class="st">"dataset5"</span>, FileToUse)){FolderDataset <span class="ot">&lt;&lt;-</span> <span class="st">"dataset5"</span>} <span class="cf">else</span> <span class="cf">if</span> (<span class="fu">grepl</span>(<span class="st">"dataset6"</span>, FileToUse)){FolderDataset <span class="ot">&lt;&lt;-</span> <span class="st">"dataset6"</span>} <span class="cf">else</span> (FolderDataset <span class="ot">&lt;-</span> <span class="fu">format</span>(<span class="fu">Sys.time</span>(), <span class="st">"%H_%M"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "16_59"</code></pre>
+</div>
+<details>
+<summary>Code</summary>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">file.exists</span>(<span class="fu">file.path</span>(export_folder, currentDate, FolderDataset))){</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>      <span class="fu">print</span>(<span class="st">"A sub folder with this time stamp already exists"</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>        <span class="co"># create a new sub directory inside</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>        <span class="co"># the main path</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>        <span class="fu">dir.create</span>(<span class="fu">file.path</span>(main_dir, export_folder,currentDate, FolderDataset))</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>raw_data <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(FileToUse)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>data <span class="ot">&lt;-</span> <span class="fu">conform</span>(raw_data) </span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="co">#if(!is.factor(data$Geslacht)){data$Geslacht&lt;-as.factor(data$Geslacht)}</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="parameters" class="level2">
+<h2 class="anchored" data-anchor-id="parameters">Parameters</h2>
+<p>Here you have to define some parameters:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co">#plotting and analysis</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>menopausal_status <span class="ot">&lt;-</span> T <span class="co"># indicate whether you want to additionally split the females by their menopausal status</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a><span class="co">#simulation</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>dobayes<span class="ot">&lt;-</span>F         <span class="co"># Indicate whether you want to perform a bayesian changepoint analysis (recommended: F)</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>dobootstrap<span class="ot">&lt;-</span>T     <span class="co"># Indicate whether you want to perform a bootstrap of the max likelihood estimate for the changepoint (recommended: T)</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>printbootstrap<span class="ot">&lt;-</span>F  <span class="co"># Indicate whether you want to print the bootstrap results. For readable quarto files this is not recommended (recommended: F) </span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>nrbssims<span class="ot">&lt;-</span><span class="dv">2</span>       <span class="co"># nr of bootstrapsamples (recommended: 200, if you just want to test the script a low value is recommended (e.g. 2))</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>bsseed<span class="ot">&lt;-</span><span class="dv">2</span>          <span class="co"># seedvalue for the bootstrap</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>rollmean_nr<span class="ot">&lt;-</span><span class="dv">1000</span>  <span class="co"># nr of samples to use in the rolling maen</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="co">#exporting results</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>export_files <span class="ot">&lt;-</span> T <span class="co"># Indicate whether you want to export the results of the analysis</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>proportion <span class="ot">&lt;-</span> <span class="fl">0.03</span> <span class="co"># proportion of your data that you will export. This really depends on how big your data is. We recommend a proportion that will still display the pattern/direction of the data.</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a><span class="co"># lower and upper limits for the changepoint fit</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a><span class="co"># these consist of the intercept, slope, changepoint and standard deviation of the error</span></span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>ll<span class="ot">=</span><span class="fu">c</span>(<span class="sc">-</span><span class="dv">2</span>, <span class="fl">0.005</span>, <span class="fl">0.5</span>, <span class="fl">0.3</span>) <span class="co"># lower limit (recommended: c(-2, 0.005, 0.5, 0.3)) </span></span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a><span class="co">#ll=c(-2, 0.005,  -4, 0.3) # lower limit (recommended: c(-2, 0.005,  -4, 0.3))</span></span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>ul<span class="ot">=</span><span class="fu">c</span>( <span class="dv">1</span>,     <span class="dv">2</span>,   <span class="dv">4</span>, <span class="fl">0.9</span>) <span class="co"># upper limit (c( 1,     2,   4, 0.9))</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="callout-important callout callout-style-simple callout-captioned">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-caption-container flex-fill">
+A note on exporting results
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Only jittered values or values derived from analyses are exported.</p>
+<p>When exporting the data, the dRefHb value and lFer variables are jittered, all the original values are removed before exporting. Original values are removed from the results of the analysis when exporting. Only the result of the analysis is exported</p>
+<p>We export the results so we can, ultimately, combine results from all countries in one graph.</p>
+</div>
+</div>
+</section>
+</section>
+<section id="changepoint-analysis" class="level1">
+<h1>Changepoint analysis</h1>
+<div class="cell">
+<details>
+<summary>analysis</summary>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="do">### set male dataset for reference</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span><span class="fu">select_males_only</span>()</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdata[<span class="fu">order</span>(refdata<span class="sc">$</span>lFer),] <span class="co"># order data by lFer</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>refdataM<span class="ot">&lt;-</span>refdata</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>fitdata<span class="ot">&lt;-</span>refdata</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>title<span class="ot">=</span><span class="fu">paste0</span>(<span class="st">"Male donors (n="</span>, <span class="fu">nrow</span>(refdataM),<span class="st">")"</span>, <span class="at">sep=</span><span class="st">""</span>)</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>xm<span class="ot">&lt;-</span><span class="fu">plotHbFer</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="2_Analysis_Finland_files/figure-html/changepoint%20analysis-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "-0.467231835587039 0.239400978106598 2.95167053736512 0.378029256724863 0 26"
+[1] "Changepoint: 894.685785309974"
+[1] "SolutionOk: TRUE"</code></pre>
+</div>
+<details>
+<summary>analysis</summary>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(export_files){</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">exportData</span>(refdataM)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">exportRollmean</span>(rollmean_data)</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">exportSolution</span>(sol_data)</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="do">### set female dataset for reference</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span><span class="fu">select_females_only</span>()</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdata[<span class="fu">order</span>(refdata<span class="sc">$</span>lFer),] <span class="co"># order data by lFer</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>refdataF<span class="ot">&lt;-</span>refdata</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>fitdata<span class="ot">&lt;-</span>refdata</span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>title<span class="ot">=</span><span class="fu">paste0</span>(<span class="st">"Female donors (n="</span>, <span class="fu">nrow</span>(refdataF), <span class="st">")"</span>, <span class="at">sep=</span><span class="st">""</span>)</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>xf<span class="ot">&lt;-</span><span class="fu">plotHbFer</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="2_Analysis_Finland_files/figure-html/changepoint%20analysis-2.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "-0.314807790795587 0.197342716095276 1.80617998553375 0.338631187113407 0 26"
+[1] "Changepoint: 64.0000017020503"
+[1] "SolutionOk: TRUE"</code></pre>
+</div>
+<details>
+<summary>analysis</summary>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(export_files){</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">exportData</span>(refdataF)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">exportRollmean</span>(rollmean_data)</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  changepoint_data <span class="ot">&lt;-</span> <span class="fu">rbind</span>(xm, xf)</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">exportSolution</span>(sol_data)}</span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(menopausal_status){</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a><span class="do">## set premenopausal female dataset for reference</span></span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span><span class="fu">select_premenopausal_only</span>()</span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdata[<span class="fu">order</span>(refdata<span class="sc">$</span>lFer),] <span class="co"># order data by lFer</span></span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>refdatapreF<span class="ot">&lt;-</span>refdata</span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>fitdata<span class="ot">&lt;-</span>refdata</span>
+<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>title<span class="ot">=</span><span class="fu">paste0</span>(<span class="st">"Premenopausal donors (n="</span>, <span class="fu">nrow</span>(refdatapreF), <span class="st">")"</span>, <span class="at">sep=</span><span class="st">""</span>)</span>
+<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>xpref<span class="ot">&lt;-</span><span class="fu">plotHbFer</span>()</span>
+<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(export_files){</span>
+<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">exportData</span>(refdatapreF)</span>
+<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">exportRollmean</span>(rollmean_data)</span>
+<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">exportSolution</span>(sol_data)} </span>
+<span id="cb19-19"><a href="#cb19-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-20"><a href="#cb19-20" aria-hidden="true" tabindex="-1"></a><span class="do">## set postmenopausal female dataset for reference</span></span>
+<span id="cb19-21"><a href="#cb19-21" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span><span class="fu">select_postmenopausal_only</span>()</span>
+<span id="cb19-22"><a href="#cb19-22" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdata[<span class="fu">order</span>(refdata<span class="sc">$</span>lFer),] <span class="co"># order data by lFer</span></span>
+<span id="cb19-23"><a href="#cb19-23" aria-hidden="true" tabindex="-1"></a>refdatapostF<span class="ot">&lt;-</span>refdata</span>
+<span id="cb19-24"><a href="#cb19-24" aria-hidden="true" tabindex="-1"></a>fitdata<span class="ot">&lt;-</span>refdata</span>
+<span id="cb19-25"><a href="#cb19-25" aria-hidden="true" tabindex="-1"></a>title<span class="ot">=</span><span class="fu">paste0</span>(<span class="st">"Postmenopausal donors (n="</span>, <span class="fu">nrow</span>(refdatapostF), <span class="st">")"</span>, <span class="at">sep=</span><span class="st">""</span>)</span>
+<span id="cb19-26"><a href="#cb19-26" aria-hidden="true" tabindex="-1"></a>xpostf<span class="ot">&lt;-</span><span class="fu">plotHbFer</span>()</span>
+<span id="cb19-27"><a href="#cb19-27" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(export_files){</span>
+<span id="cb19-28"><a href="#cb19-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">exportData</span>(refdatapostF)</span>
+<span id="cb19-29"><a href="#cb19-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">exportRollmean</span>(rollmean_data)</span>
+<span id="cb19-30"><a href="#cb19-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">exportSolution</span>(sol_data)}</span>
+<span id="cb19-31"><a href="#cb19-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-32"><a href="#cb19-32" aria-hidden="true" tabindex="-1"></a>changepoint_data <span class="ot">&lt;-</span> <span class="fu">rbind</span>(xm, xf, xpref, xpostf)}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="2_Analysis_Finland_files/figure-html/changepoint%20analysis-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "-0.389996036323803 0.255972506797269 1.6254880210236 0.307735970203886 0 26"
+[1] "Changepoint: 42.2170634321524"
+[1] "SolutionOk: TRUE"</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="2_Analysis_Finland_files/figure-html/changepoint%20analysis-4.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "-0.281011461486204 0.171764940735305 1.86332285300954 0.384006927230818 0 26"
+[1] "Changepoint: 72.9999988047361"
+[1] "SolutionOk: TRUE"</code></pre>
+</div>
+</div>
+</section>
+<section id="bootstrap-results" class="level1">
+<h1>Bootstrap results</h1>
+<section id="run-bootstrap" class="level2">
+<h2 class="anchored" data-anchor-id="run-bootstrap">Run bootstrap</h2>
+<p>Bootstrap will run only if set to T in parameters.</p>
+<div class="cell">
+<details>
+<summary>bootstrap</summary>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(dobootstrap){</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="do">### set male dataset for reference</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span><span class="fu">select_males_only</span>()</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdata[<span class="fu">order</span>(refdata<span class="sc">$</span>lFer),] </span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(refdata) </span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID)) </span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(refdata)<span class="sc">/</span><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID)) </span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(refdata<span class="sc">$</span>Ferritin<span class="sc">&lt;=</span><span class="dv">30</span>)<span class="sc">/</span><span class="fu">nrow</span>(refdata)</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID[refdata<span class="sc">$</span>Ferritin<span class="sc">&lt;=</span><span class="dv">30</span>])) </span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID[refdata<span class="sc">$</span>Ferritin<span class="sc">&lt;=</span><span class="dv">30</span>]))<span class="sc">/</span><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID))</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a><span class="co"># copy reference dataset for fitting models (and bootstrapping)</span></span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>refdataM<span class="ot">&lt;-</span>refdata</span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a><span class="co">#fitdata&lt;-fitdata[1:1000,]</span></span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a><span class="do">### plot lFer vs dRefHb</span></span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a><span class="co">#xm&lt;-plotHbFer()</span></span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a><span class="do">### set female dataset for reference</span></span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span><span class="fu">select_females_only</span>()</span>
+<span id="cb22-22"><a href="#cb22-22" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdata[<span class="fu">order</span>(refdata<span class="sc">$</span>lFer),] </span>
+<span id="cb22-23"><a href="#cb22-23" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(refdata) </span>
+<span id="cb22-24"><a href="#cb22-24" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID)) </span>
+<span id="cb22-25"><a href="#cb22-25" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(refdata)<span class="sc">/</span><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID)) </span>
+<span id="cb22-26"><a href="#cb22-26" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(refdata<span class="sc">$</span>Ferritin<span class="sc">&lt;=</span><span class="dv">30</span>)<span class="sc">/</span><span class="fu">nrow</span>(refdata) </span>
+<span id="cb22-27"><a href="#cb22-27" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID[refdata<span class="sc">$</span>Ferritin<span class="sc">&lt;=</span><span class="dv">30</span>])) </span>
+<span id="cb22-28"><a href="#cb22-28" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID[refdata<span class="sc">$</span>Ferritin<span class="sc">&lt;=</span><span class="dv">30</span>]))<span class="sc">/</span><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID)) </span>
+<span id="cb22-29"><a href="#cb22-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-30"><a href="#cb22-30" aria-hidden="true" tabindex="-1"></a><span class="co"># copy reference dataset for fitting models (and bootstrapping)</span></span>
+<span id="cb22-31"><a href="#cb22-31" aria-hidden="true" tabindex="-1"></a>refdataF<span class="ot">&lt;-</span>refdata</span>
+<span id="cb22-32"><a href="#cb22-32" aria-hidden="true" tabindex="-1"></a><span class="co">#fitdata&lt;-fitdata[1:1000,]</span></span>
+<span id="cb22-33"><a href="#cb22-33" aria-hidden="true" tabindex="-1"></a><span class="co">#xf&lt;-plotHbFer()</span></span>
+<span id="cb22-34"><a href="#cb22-34" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(menopausal_status){</span>
+<span id="cb22-35"><a href="#cb22-35" aria-hidden="true" tabindex="-1"></a><span class="do">### set premenopausal dataset for reference</span></span>
+<span id="cb22-36"><a href="#cb22-36" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span><span class="fu">select_premenopausal_only</span>()</span>
+<span id="cb22-37"><a href="#cb22-37" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdata[<span class="fu">order</span>(refdata<span class="sc">$</span>lFer),] </span>
+<span id="cb22-38"><a href="#cb22-38" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(refdata) </span>
+<span id="cb22-39"><a href="#cb22-39" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID)) </span>
+<span id="cb22-40"><a href="#cb22-40" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(refdata)<span class="sc">/</span><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID)) </span>
+<span id="cb22-41"><a href="#cb22-41" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(refdata<span class="sc">$</span>Ferritin<span class="sc">&lt;=</span><span class="dv">30</span>)<span class="sc">/</span><span class="fu">nrow</span>(refdata) </span>
+<span id="cb22-42"><a href="#cb22-42" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID[refdata<span class="sc">$</span>Ferritin<span class="sc">&lt;=</span><span class="dv">30</span>])) </span>
+<span id="cb22-43"><a href="#cb22-43" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID[refdata<span class="sc">$</span>Ferritin<span class="sc">&lt;=</span><span class="dv">30</span>]))<span class="sc">/</span><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID)) </span>
+<span id="cb22-44"><a href="#cb22-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-45"><a href="#cb22-45" aria-hidden="true" tabindex="-1"></a><span class="co"># copy reference dataset for fitting models (and bootstrapping)</span></span>
+<span id="cb22-46"><a href="#cb22-46" aria-hidden="true" tabindex="-1"></a>refdatapreF<span class="ot">&lt;-</span>refdata</span>
+<span id="cb22-47"><a href="#cb22-47" aria-hidden="true" tabindex="-1"></a><span class="co">#fitdata&lt;-fitdata[1:1000,]</span></span>
+<span id="cb22-48"><a href="#cb22-48" aria-hidden="true" tabindex="-1"></a><span class="co">#xpref&lt;-plotHbFer()</span></span>
+<span id="cb22-49"><a href="#cb22-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-50"><a href="#cb22-50" aria-hidden="true" tabindex="-1"></a><span class="do">### set postmenopausal dataset for reference</span></span>
+<span id="cb22-51"><a href="#cb22-51" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span><span class="fu">select_postmenopausal_only</span>()</span>
+<span id="cb22-52"><a href="#cb22-52" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdata[<span class="fu">order</span>(refdata<span class="sc">$</span>lFer),] </span>
+<span id="cb22-53"><a href="#cb22-53" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(refdata) </span>
+<span id="cb22-54"><a href="#cb22-54" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID)) </span>
+<span id="cb22-55"><a href="#cb22-55" aria-hidden="true" tabindex="-1"></a><span class="fu">nrow</span>(refdata)<span class="sc">/</span><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID)) </span>
+<span id="cb22-56"><a href="#cb22-56" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(refdata<span class="sc">$</span>Ferritin<span class="sc">&lt;=</span><span class="dv">30</span>)<span class="sc">/</span><span class="fu">nrow</span>(refdata) </span>
+<span id="cb22-57"><a href="#cb22-57" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID[refdata<span class="sc">$</span>Ferritin<span class="sc">&lt;=</span><span class="dv">30</span>])) </span>
+<span id="cb22-58"><a href="#cb22-58" aria-hidden="true" tabindex="-1"></a><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID[refdata<span class="sc">$</span>Ferritin<span class="sc">&lt;=</span><span class="dv">30</span>]))<span class="sc">/</span><span class="fu">length</span>(<span class="fu">unique</span>(refdata<span class="sc">$</span>KeyID)) </span>
+<span id="cb22-59"><a href="#cb22-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-60"><a href="#cb22-60" aria-hidden="true" tabindex="-1"></a><span class="co"># copy reference dataset for fitting models (and bootstrapping)</span></span>
+<span id="cb22-61"><a href="#cb22-61" aria-hidden="true" tabindex="-1"></a>refdatapostF<span class="ot">&lt;-</span>refdata</span>
+<span id="cb22-62"><a href="#cb22-62" aria-hidden="true" tabindex="-1"></a><span class="co">#fitdata&lt;-fitdata[1:1000,]</span></span>
+<span id="cb22-63"><a href="#cb22-63" aria-hidden="true" tabindex="-1"></a><span class="co">#xpostf&lt;-plotHbFer()</span></span>
+<span id="cb22-64"><a href="#cb22-64" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb22-65"><a href="#cb22-65" aria-hidden="true" tabindex="-1"></a><span class="fu">rm</span>(data)</span>
+<span id="cb22-66"><a href="#cb22-66" aria-hidden="true" tabindex="-1"></a><span class="cf">while</span> (<span class="sc">!</span><span class="fu">is.null</span>(<span class="fu">dev.list</span>())) <span class="fu">dev.off</span>()</span>
+<span id="cb22-67"><a href="#cb22-67" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-68"><a href="#cb22-68" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (bsseed <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>) {</span>
+<span id="cb22-69"><a href="#cb22-69" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-70"><a href="#cb22-70" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(printbootstrap){  <span class="fu">print</span>(<span class="st">""</span>)</span>
+<span id="cb22-71"><a href="#cb22-71" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">paste</span>(<span class="st">"seed ="</span>,bsseed))</span>
+<span id="cb22-72"><a href="#cb22-72" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="st">""</span>)}</span>
+<span id="cb22-73"><a href="#cb22-73" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-74"><a href="#cb22-74" aria-hidden="true" tabindex="-1"></a>  <span class="do">### bootstrap this result</span></span>
+<span id="cb22-75"><a href="#cb22-75" aria-hidden="true" tabindex="-1"></a>  refdata<span class="ot">&lt;-</span>refdataM</span>
+<span id="cb22-76"><a href="#cb22-76" aria-hidden="true" tabindex="-1"></a>  fitdata<span class="ot">&lt;-</span>refdataM</span>
+<span id="cb22-77"><a href="#cb22-77" aria-hidden="true" tabindex="-1"></a>  bsxm<span class="ot">&lt;-</span><span class="fu">c</span>()</span>
+<span id="cb22-78"><a href="#cb22-78" aria-hidden="true" tabindex="-1"></a>  nr<span class="ot">&lt;-</span><span class="fu">nrow</span>(fitdata)</span>
+<span id="cb22-79"><a href="#cb22-79" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set.seed</span>(bsseed)</span>
+<span id="cb22-80"><a href="#cb22-80" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nrbssims){</span>
+<span id="cb22-81"><a href="#cb22-81" aria-hidden="true" tabindex="-1"></a>    fitdata<span class="ot">&lt;-</span>refdata[<span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span>nr, nr, <span class="at">replace =</span> T), <span class="fu">c</span>(<span class="st">"lFer"</span>,<span class="st">"dRefHb"</span>)]</span>
+<span id="cb22-82"><a href="#cb22-82" aria-hidden="true" tabindex="-1"></a>    bsr<span class="ot">&lt;-</span><span class="fu">fminsearch</span>(fitf, xm, <span class="at">lower=</span>ll, <span class="at">upper=</span>ul, <span class="at">method=</span><span class="st">"Hooke-Jeeves"</span>)</span>
+<span id="cb22-83"><a href="#cb22-83" aria-hidden="true" tabindex="-1"></a>    bsxm<span class="ot">&lt;-</span><span class="fu">rbind</span>(bsxm, <span class="fu">c</span>(bsr<span class="sc">$</span>xmin, bsr<span class="sc">$</span>convergence, bsr<span class="sc">$</span>info<span class="sc">$</span>iterations, <span class="fu">SolutionOk</span>(bsr<span class="sc">$</span>xmin)))</span>
+<span id="cb22-84"><a href="#cb22-84" aria-hidden="true" tabindex="-1"></a>    <span class="co"># print(paste(i,":",paste(bsr$xmin, collapse = " "), bsr$convergence, bsr$info$iterations))</span></span>
+<span id="cb22-85"><a href="#cb22-85" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(printbootstrap){<span class="fu">print</span>(<span class="fu">paste</span>(i,<span class="st">":"</span>,<span class="fu">paste</span>(bsxm[i,], <span class="at">collapse =</span> <span class="st">" "</span>)))}</span>
+<span id="cb22-86"><a href="#cb22-86" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb22-87"><a href="#cb22-87" aria-hidden="true" tabindex="-1"></a>  MaleBootstrapResultFile<span class="ot">&lt;-</span><span class="fu">paste0</span>(<span class="st">"~/proj/who_ferritin_comment/data/FerHb/bootstrap_results/"</span>, <span class="fu">Sys.Date</span>(), <span class="st">"/"</span>, subsetname, <span class="st">"_"</span>, <span class="st">"Male_Bootstrap_"</span>, nrbssims,<span class="st">"_samp_"</span>,bsseed, <span class="st">"seed.RDS"</span>)</span>
+<span id="cb22-88"><a href="#cb22-88" aria-hidden="true" tabindex="-1"></a>  <span class="fu">saveRDS</span>(bsxm, <span class="at">file=</span>MaleBootstrapResultFile)</span>
+<span id="cb22-89"><a href="#cb22-89" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb22-90"><a href="#cb22-90" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-91"><a href="#cb22-91" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (bsseed <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>) {</span>
+<span id="cb22-92"><a href="#cb22-92" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-93"><a href="#cb22-93" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(printbootstrap){  <span class="fu">print</span>(<span class="st">""</span>)</span>
+<span id="cb22-94"><a href="#cb22-94" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">paste</span>(<span class="st">"seed ="</span>,bsseed))</span>
+<span id="cb22-95"><a href="#cb22-95" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="st">""</span>)}</span>
+<span id="cb22-96"><a href="#cb22-96" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-97"><a href="#cb22-97" aria-hidden="true" tabindex="-1"></a>  <span class="do">### now bootstrap this result</span></span>
+<span id="cb22-98"><a href="#cb22-98" aria-hidden="true" tabindex="-1"></a>  refdata<span class="ot">&lt;-</span>refdataF</span>
+<span id="cb22-99"><a href="#cb22-99" aria-hidden="true" tabindex="-1"></a>  fitdata<span class="ot">&lt;-</span>refdataF</span>
+<span id="cb22-100"><a href="#cb22-100" aria-hidden="true" tabindex="-1"></a>  bsxf<span class="ot">&lt;-</span><span class="fu">c</span>()</span>
+<span id="cb22-101"><a href="#cb22-101" aria-hidden="true" tabindex="-1"></a>  nr<span class="ot">&lt;-</span><span class="fu">nrow</span>(fitdata)</span>
+<span id="cb22-102"><a href="#cb22-102" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set.seed</span>(bsseed)</span>
+<span id="cb22-103"><a href="#cb22-103" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nrbssims){</span>
+<span id="cb22-104"><a href="#cb22-104" aria-hidden="true" tabindex="-1"></a>    fitdata<span class="ot">&lt;-</span>refdata[<span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span>nr, nr, <span class="at">replace =</span> T), <span class="fu">c</span>(<span class="st">"lFer"</span>,<span class="st">"dRefHb"</span>)]</span>
+<span id="cb22-105"><a href="#cb22-105" aria-hidden="true" tabindex="-1"></a>    bsr<span class="ot">&lt;-</span><span class="fu">fminsearch</span>(fitf, xf, <span class="at">lower=</span>ll, <span class="at">upper=</span>ul, <span class="at">method=</span><span class="st">"Hooke-Jeeves"</span>)</span>
+<span id="cb22-106"><a href="#cb22-106" aria-hidden="true" tabindex="-1"></a>    bsxf<span class="ot">&lt;-</span><span class="fu">rbind</span>(bsxf, <span class="fu">c</span>(bsr<span class="sc">$</span>xmin, bsr<span class="sc">$</span>convergence, bsr<span class="sc">$</span>info<span class="sc">$</span>iterations, <span class="fu">SolutionOk</span>(bsr<span class="sc">$</span>xmin)))</span>
+<span id="cb22-107"><a href="#cb22-107" aria-hidden="true" tabindex="-1"></a>    <span class="co"># print(paste(i,":",paste(bsr$xmin, collapse = " "), bsr$convergence, bsr$info$iterations))</span></span>
+<span id="cb22-108"><a href="#cb22-108" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(printbootstrap){<span class="fu">print</span>(<span class="fu">paste</span>(i,<span class="st">":"</span>,<span class="fu">paste</span>(bsxf[i,], <span class="at">collapse =</span> <span class="st">" "</span>)))}</span>
+<span id="cb22-109"><a href="#cb22-109" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb22-110"><a href="#cb22-110" aria-hidden="true" tabindex="-1"></a>  FemaleBootstrapResultFile <span class="ot">&lt;-</span><span class="fu">paste0</span>(<span class="st">"~/proj/who_ferritin_comment/data/FerHb/bootstrap_results/"</span>, <span class="fu">Sys.Date</span>(), <span class="st">"/"</span>, subsetname, <span class="st">"_"</span>, <span class="st">"Female_Bootstrap_"</span>,nrbssims,<span class="st">"_samp_"</span>, bsseed, <span class="st">"seed.RDS"</span>)</span>
+<span id="cb22-111"><a href="#cb22-111" aria-hidden="true" tabindex="-1"></a>  <span class="fu">saveRDS</span>(bsxf, <span class="at">file=</span>FemaleBootstrapResultFile)</span>
+<span id="cb22-112"><a href="#cb22-112" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-113"><a href="#cb22-113" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb22-114"><a href="#cb22-114" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(menopausal_status){</span>
+<span id="cb22-115"><a href="#cb22-115" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (bsseed <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>) {</span>
+<span id="cb22-116"><a href="#cb22-116" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-117"><a href="#cb22-117" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(printbootstrap){  <span class="fu">print</span>(<span class="st">""</span>)</span>
+<span id="cb22-118"><a href="#cb22-118" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">paste</span>(<span class="st">"seed ="</span>,bsseed))</span>
+<span id="cb22-119"><a href="#cb22-119" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="st">""</span>)</span>
+<span id="cb22-120"><a href="#cb22-120" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb22-121"><a href="#cb22-121" aria-hidden="true" tabindex="-1"></a>  <span class="do">### now bootstrap this result</span></span>
+<span id="cb22-122"><a href="#cb22-122" aria-hidden="true" tabindex="-1"></a>  refdata<span class="ot">&lt;-</span>refdatapreF</span>
+<span id="cb22-123"><a href="#cb22-123" aria-hidden="true" tabindex="-1"></a>  fitdata<span class="ot">&lt;-</span>refdatapreF</span>
+<span id="cb22-124"><a href="#cb22-124" aria-hidden="true" tabindex="-1"></a>  bsxpref<span class="ot">&lt;-</span><span class="fu">c</span>()</span>
+<span id="cb22-125"><a href="#cb22-125" aria-hidden="true" tabindex="-1"></a>  nr<span class="ot">&lt;-</span><span class="fu">nrow</span>(fitdata)</span>
+<span id="cb22-126"><a href="#cb22-126" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set.seed</span>(bsseed)</span>
+<span id="cb22-127"><a href="#cb22-127" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nrbssims){</span>
+<span id="cb22-128"><a href="#cb22-128" aria-hidden="true" tabindex="-1"></a>    fitdata<span class="ot">&lt;-</span>refdata[<span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span>nr, nr, <span class="at">replace =</span> T), <span class="fu">c</span>(<span class="st">"lFer"</span>,<span class="st">"dRefHb"</span>)]</span>
+<span id="cb22-129"><a href="#cb22-129" aria-hidden="true" tabindex="-1"></a>    bsr<span class="ot">&lt;-</span><span class="fu">fminsearch</span>(fitf, xpref, <span class="at">lower=</span>ll, <span class="at">upper=</span>ul, <span class="at">method=</span><span class="st">"Hooke-Jeeves"</span>)</span>
+<span id="cb22-130"><a href="#cb22-130" aria-hidden="true" tabindex="-1"></a>    bsxpref<span class="ot">&lt;-</span><span class="fu">rbind</span>(bsxpref, <span class="fu">c</span>(bsr<span class="sc">$</span>xmin, bsr<span class="sc">$</span>convergence, bsr<span class="sc">$</span>info<span class="sc">$</span>iterations, <span class="fu">SolutionOk</span>(bsr<span class="sc">$</span>xmin)))</span>
+<span id="cb22-131"><a href="#cb22-131" aria-hidden="true" tabindex="-1"></a>    <span class="co"># print(paste(i,":",paste(bsr$xmin, collapse = " "), bsr$convergence, bsr$info$iterations))</span></span>
+<span id="cb22-132"><a href="#cb22-132" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(printbootstrap){<span class="fu">print</span>(<span class="fu">paste</span>(i,<span class="st">":"</span>,<span class="fu">paste</span>(bsxpref[i,], <span class="at">collapse =</span> <span class="st">" "</span>)))}</span>
+<span id="cb22-133"><a href="#cb22-133" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb22-134"><a href="#cb22-134" aria-hidden="true" tabindex="-1"></a>  PremenopausalBootstrapResultFile<span class="ot">&lt;-</span><span class="fu">paste0</span>(<span class="st">"~/proj/who_ferritin_comment/data/FerHb/bootstrap_results/"</span>, <span class="fu">Sys.Date</span>(), <span class="st">"/"</span>, subsetname, <span class="st">"_"</span>, <span class="st">"Premenopausal_Bootstrap_"</span>,nrbssims,<span class="st">"_samp_"</span>, bsseed, <span class="st">"seed.RDS"</span>)</span>
+<span id="cb22-135"><a href="#cb22-135" aria-hidden="true" tabindex="-1"></a>  <span class="fu">saveRDS</span>(bsxpref, <span class="at">file=</span>PremenopausalBootstrapResultFile)</span>
+<span id="cb22-136"><a href="#cb22-136" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-137"><a href="#cb22-137" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb22-138"><a href="#cb22-138" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (bsseed <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>) {</span>
+<span id="cb22-139"><a href="#cb22-139" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-140"><a href="#cb22-140" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(printbootstrap){  <span class="fu">print</span>(<span class="st">""</span>)</span>
+<span id="cb22-141"><a href="#cb22-141" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="fu">paste</span>(<span class="st">"seed ="</span>,bsseed))</span>
+<span id="cb22-142"><a href="#cb22-142" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="st">""</span>)}</span>
+<span id="cb22-143"><a href="#cb22-143" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-144"><a href="#cb22-144" aria-hidden="true" tabindex="-1"></a>  <span class="do">### now bootstrap this result</span></span>
+<span id="cb22-145"><a href="#cb22-145" aria-hidden="true" tabindex="-1"></a>  refdata<span class="ot">&lt;-</span>refdatapostF</span>
+<span id="cb22-146"><a href="#cb22-146" aria-hidden="true" tabindex="-1"></a>  fitdata<span class="ot">&lt;-</span>refdatapostF</span>
+<span id="cb22-147"><a href="#cb22-147" aria-hidden="true" tabindex="-1"></a>  bsxpostf<span class="ot">&lt;-</span><span class="fu">c</span>()</span>
+<span id="cb22-148"><a href="#cb22-148" aria-hidden="true" tabindex="-1"></a>  nr<span class="ot">&lt;-</span><span class="fu">nrow</span>(fitdata)</span>
+<span id="cb22-149"><a href="#cb22-149" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set.seed</span>(bsseed)</span>
+<span id="cb22-150"><a href="#cb22-150" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>nrbssims){</span>
+<span id="cb22-151"><a href="#cb22-151" aria-hidden="true" tabindex="-1"></a>    fitdata<span class="ot">&lt;-</span>refdata[<span class="fu">sample</span>(<span class="dv">1</span><span class="sc">:</span>nr, nr, <span class="at">replace =</span> T), <span class="fu">c</span>(<span class="st">"lFer"</span>,<span class="st">"dRefHb"</span>)]</span>
+<span id="cb22-152"><a href="#cb22-152" aria-hidden="true" tabindex="-1"></a>    bsr<span class="ot">&lt;-</span><span class="fu">fminsearch</span>(fitf, xpostf, <span class="at">lower=</span>ll, <span class="at">upper=</span>ul, <span class="at">method=</span><span class="st">"Hooke-Jeeves"</span>)</span>
+<span id="cb22-153"><a href="#cb22-153" aria-hidden="true" tabindex="-1"></a>    bsxpostf<span class="ot">&lt;-</span><span class="fu">rbind</span>(bsxpostf, <span class="fu">c</span>(bsr<span class="sc">$</span>xmin, bsr<span class="sc">$</span>convergence, bsr<span class="sc">$</span>info<span class="sc">$</span>iterations, <span class="fu">SolutionOk</span>(bsr<span class="sc">$</span>xmin)))</span>
+<span id="cb22-154"><a href="#cb22-154" aria-hidden="true" tabindex="-1"></a>    <span class="co"># print(paste(i,":",paste(bsr$xmin, collapse = " "), bsr$convergence, bsr$info$iterations))</span></span>
+<span id="cb22-155"><a href="#cb22-155" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(printbootstrap){<span class="fu">print</span>(<span class="fu">paste</span>(i,<span class="st">":"</span>,<span class="fu">paste</span>(bsxpostf[i,], <span class="at">collapse =</span> <span class="st">" "</span>)))}</span>
+<span id="cb22-156"><a href="#cb22-156" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb22-157"><a href="#cb22-157" aria-hidden="true" tabindex="-1"></a>  PostmenopausalBootstrapResultFile<span class="ot">&lt;-</span><span class="fu">paste0</span>(<span class="st">"~/proj/who_ferritin_comment/data/FerHb/bootstrap_results/"</span>, <span class="fu">Sys.Date</span>(), <span class="st">"/"</span>, subsetname, <span class="st">"_"</span>, <span class="st">"Postmenopausal_Bootstrap_"</span>,nrbssims,<span class="st">"_samp_"</span>, bsseed, <span class="st">"seed.RDS"</span>)</span>
+<span id="cb22-158"><a href="#cb22-158" aria-hidden="true" tabindex="-1"></a>  <span class="fu">saveRDS</span>(bsxpostf, <span class="at">file=</span>PostmenopausalBootstrapResultFile)</span>
+<span id="cb22-159"><a href="#cb22-159" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb22-160"><a href="#cb22-160" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb22-161"><a href="#cb22-161" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb22-162"><a href="#cb22-162" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-163"><a href="#cb22-163" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+</section>
+<section id="read-and-combine-previous-bootstrap-results" class="level2">
+<h2 class="anchored" data-anchor-id="read-and-combine-previous-bootstrap-results">Read and combine previous bootstrap results</h2>
+<p>This is necessary because the bootstrap procedure is split into 200 iterations per sample, to enhance speed.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co">#define here your main directory</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="co">#this will load bootstrap files from today's folder, adjust if you want to load them from another folder by adjusting the sub_dir/date or hard coding the path of the folder that you want to load bootstrap files from</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="fu">load_bootstrap_files</span>(<span class="fu">file.path</span>(main_dir, sub_dir, currentDate))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "Files found:"
+ [1] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Female_Bootstrap_2_samp_1seed.RDS"                        
+ [2] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Female_Bootstrap_2_samp_2seed.RDS"                        
+ [3] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Female_Bootstrap_2_samp_3seed.RDS"                        
+ [4] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Female_Bootstrap_2_samp_4seed.RDS"                        
+ [5] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Female_Bootstrap_2_samp_5seed.RDS"                        
+ [6] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Male_Bootstrap_2_samp_1seed.RDS"                          
+ [7] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Male_Bootstrap_2_samp_2seed.RDS"                          
+ [8] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Male_Bootstrap_2_samp_3seed.RDS"                          
+ [9] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Male_Bootstrap_2_samp_4seed.RDS"                          
+[10] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Male_Bootstrap_2_samp_5seed.RDS"                          
+[11] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Postmenopausal_Bootstrap_2_samp_1seed.RDS"                
+[12] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Postmenopausal_Bootstrap_2_samp_2seed.RDS"                
+[13] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Postmenopausal_Bootstrap_2_samp_3seed.RDS"                
+[14] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Postmenopausal_Bootstrap_2_samp_4seed.RDS"                
+[15] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Postmenopausal_Bootstrap_2_samp_5seed.RDS"                
+[16] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Premenopausal_Bootstrap_2_samp_1seed.RDS"                 
+[17] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Premenopausal_Bootstrap_2_samp_2seed.RDS"                 
+[18] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Premenopausal_Bootstrap_2_samp_3seed.RDS"                 
+[19] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Premenopausal_Bootstrap_2_samp_4seed.RDS"                 
+[20] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/1yr_washout_all_all_Premenopausal_Bootstrap_2_samp_5seed.RDS"                 
+[21] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Female_Bootstrap_10samp_combinedseed.RDS"        
+[22] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Female_Bootstrap_2_samp_1seed.RDS"               
+[23] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Female_Bootstrap_2_samp_2seed.RDS"               
+[24] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Female_Bootstrap_2_samp_3seed.RDS"               
+[25] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Female_Bootstrap_2_samp_4seed.RDS"               
+[26] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Female_Bootstrap_2_samp_5seed.RDS"               
+[27] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Male_Bootstrap_10samp_combinedseed.RDS"          
+[28] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Male_Bootstrap_2_samp_1seed.RDS"                 
+[29] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Male_Bootstrap_2_samp_2seed.RDS"                 
+[30] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Male_Bootstrap_2_samp_3seed.RDS"                 
+[31] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Male_Bootstrap_2_samp_4seed.RDS"                 
+[32] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Male_Bootstrap_2_samp_5seed.RDS"                 
+[33] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Postmenopausal_Bootstrap_10samp_combinedseed.RDS"
+[34] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Postmenopausal_Bootstrap_2_samp_1seed.RDS"       
+[35] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Postmenopausal_Bootstrap_2_samp_2seed.RDS"       
+[36] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Postmenopausal_Bootstrap_2_samp_3seed.RDS"       
+[37] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Postmenopausal_Bootstrap_2_samp_4seed.RDS"       
+[38] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Postmenopausal_Bootstrap_2_samp_5seed.RDS"       
+[39] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Premenopausal_Bootstrap_10samp_combinedseed.RDS" 
+[40] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Premenopausal_Bootstrap_2_samp_1seed.RDS"        
+[41] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Premenopausal_Bootstrap_2_samp_2seed.RDS"        
+[42] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Premenopausal_Bootstrap_2_samp_3seed.RDS"        
+[43] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Premenopausal_Bootstrap_2_samp_4seed.RDS"        
+[44] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Premenopausal_Bootstrap_2_samp_5seed.RDS"        
+[45] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Female_Bootstrap_10samp_combinedseed.RDS"          
+[46] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Female_Bootstrap_2_samp_1seed.RDS"                 
+[47] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Female_Bootstrap_2_samp_2seed.RDS"                 
+[48] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Female_Bootstrap_2_samp_3seed.RDS"                 
+[49] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Female_Bootstrap_2_samp_4seed.RDS"                 
+[50] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Female_Bootstrap_2_samp_5seed.RDS"                 
+[51] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Male_Bootstrap_10samp_combinedseed.RDS"            
+[52] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Male_Bootstrap_2_samp_1seed.RDS"                   
+[53] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Male_Bootstrap_2_samp_2seed.RDS"                   
+[54] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Male_Bootstrap_2_samp_3seed.RDS"                   
+[55] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Male_Bootstrap_2_samp_4seed.RDS"                   
+[56] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Male_Bootstrap_2_samp_5seed.RDS"                   
+[57] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Postmenopausal_Bootstrap_10samp_combinedseed.RDS"  
+[58] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Postmenopausal_Bootstrap_2_samp_1seed.RDS"         
+[59] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Postmenopausal_Bootstrap_2_samp_2seed.RDS"         
+[60] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Postmenopausal_Bootstrap_2_samp_3seed.RDS"         
+[61] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Postmenopausal_Bootstrap_2_samp_4seed.RDS"         
+[62] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Postmenopausal_Bootstrap_2_samp_5seed.RDS"         
+[63] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Premenopausal_Bootstrap_10samp_combinedseed.RDS"   
+[64] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Premenopausal_Bootstrap_2_samp_1seed.RDS"          
+[65] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Premenopausal_Bootstrap_2_samp_2seed.RDS"          
+[66] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Premenopausal_Bootstrap_2_samp_3seed.RDS"          
+[67] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Premenopausal_Bootstrap_2_samp_4seed.RDS"          
+[68] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Premenopausal_Bootstrap_2_samp_5seed.RDS"          
+[69] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Female_Bootstrap_10samp_combinedseed.RDS"                  
+[70] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Female_Bootstrap_2_samp_1seed.RDS"                         
+[71] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Female_Bootstrap_2_samp_2seed.RDS"                         
+[72] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Female_Bootstrap_2_samp_3seed.RDS"                         
+[73] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Female_Bootstrap_2_samp_4seed.RDS"                         
+[74] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Female_Bootstrap_2_samp_5seed.RDS"                         
+[75] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Male_Bootstrap_10samp_combinedseed.RDS"                    
+[76] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Male_Bootstrap_2_samp_1seed.RDS"                           
+[77] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Male_Bootstrap_2_samp_2seed.RDS"                           
+[78] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Male_Bootstrap_2_samp_3seed.RDS"                           
+[79] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Male_Bootstrap_2_samp_4seed.RDS"                           
+[80] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Male_Bootstrap_2_samp_5seed.RDS"                           
+[81] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Postmenopausal_Bootstrap_10samp_combinedseed.RDS"          
+[82] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Postmenopausal_Bootstrap_2_samp_1seed.RDS"                 
+[83] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Postmenopausal_Bootstrap_2_samp_2seed.RDS"                 
+[84] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Postmenopausal_Bootstrap_2_samp_3seed.RDS"                 
+[85] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Postmenopausal_Bootstrap_2_samp_4seed.RDS"                 
+[86] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Postmenopausal_Bootstrap_2_samp_5seed.RDS"                 
+[87] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Premenopausal_Bootstrap_10samp_combinedseed.RDS"           
+[88] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Premenopausal_Bootstrap_2_samp_1seed.RDS"                  
+[89] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Premenopausal_Bootstrap_2_samp_2seed.RDS"                  
+[90] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Premenopausal_Bootstrap_2_samp_3seed.RDS"                  
+[91] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Premenopausal_Bootstrap_2_samp_4seed.RDS"                  
+[92] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Premenopausal_Bootstrap_2_samp_5seed.RDS"                  
+[1] ""
+[1] "Files that will not be merged into the combined file (because they are combined already):"
+ [1] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Female_Bootstrap_10samp_combinedseed.RDS"        
+ [2] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Male_Bootstrap_10samp_combinedseed.RDS"          
+ [3] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Postmenopausal_Bootstrap_10samp_combinedseed.RDS"
+ [4] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1-2yrfollowup_Premenopausal_Bootstrap_10samp_combinedseed.RDS" 
+ [5] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Female_Bootstrap_10samp_combinedseed.RDS"          
+ [6] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Male_Bootstrap_10samp_combinedseed.RDS"            
+ [7] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Postmenopausal_Bootstrap_10samp_combinedseed.RDS"  
+ [8] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_1yrfollowup_Premenopausal_Bootstrap_10samp_combinedseed.RDS"   
+ [9] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Female_Bootstrap_10samp_combinedseed.RDS"                  
+[10] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Male_Bootstrap_10samp_combinedseed.RDS"                    
+[11] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Postmenopausal_Bootstrap_10samp_combinedseed.RDS"          
+[12] "/home/esa/proj/who_ferritin_comment/data/FerHb/bootstrap_results/2023-07-06/no_washout_all_all_Premenopausal_Bootstrap_10samp_combinedseed.RDS"           </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co">#females:</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>bsxf<span class="ot">&lt;-</span><span class="fu">readRDS</span>(females_bootstrap[<span class="dv">1</span>])</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>bsseed){</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>  bsxf<span class="ot">&lt;&lt;-</span><span class="fu">rbind</span>(bsxf, <span class="fu">readRDS</span>(females_bootstrap[i]))</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>FemaleBootstrapResultFile<span class="ot">&lt;-</span><span class="fu">paste0</span>(<span class="fu">file.path</span>(main_dir, sub_dir, currentDate), <span class="st">"/"</span>, subsetname, <span class="st">"_"</span>, <span class="st">"Female_Bootstrap_"</span>, bsseed<span class="sc">*</span>nrbssims, <span class="st">"samp_combinedseed.RDS"</span>, <span class="at">sep=</span><span class="st">""</span>)</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(bsxf, <span class="at">file=</span>FemaleBootstrapResultFile)</span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a><span class="co">#males:</span></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>bsxm<span class="ot">&lt;-</span><span class="fu">readRDS</span>(males_bootstrap[<span class="dv">1</span>])</span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>bsseed){</span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>  bsxm<span class="ot">&lt;&lt;-</span><span class="fu">rbind</span>(bsxm, <span class="fu">readRDS</span>(males_bootstrap[i]))</span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>MaleBootstrapResultFile<span class="ot">&lt;-</span><span class="fu">paste0</span>(<span class="fu">file.path</span>(main_dir, sub_dir, currentDate), <span class="st">"/"</span>, subsetname, <span class="st">"_"</span>, <span class="st">"Male_Bootstrap_"</span>, bsseed<span class="sc">*</span>nrbssims, <span class="st">"samp_combinedseed.RDS"</span>, <span class="at">sep=</span><span class="st">""</span>)</span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(bsxm, <span class="at">file=</span>MaleBootstrapResultFile)</span>
+<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(menopausal_status){</span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">#premenopausal females:</span></span>
+<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a>bsxpref<span class="ot">&lt;-</span><span class="fu">readRDS</span>(premenopausal_bootstrap[<span class="dv">1</span>])</span>
+<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>bsseed){</span>
+<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a>  bsxpref<span class="ot">&lt;&lt;-</span><span class="fu">rbind</span>(bsxpref, <span class="fu">readRDS</span>(premenopausal_bootstrap[i]))</span>
+<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-25"><a href="#cb25-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a>PremenopausalBootstrapResultFile<span class="ot">&lt;-</span><span class="fu">paste0</span>(<span class="fu">file.path</span>(main_dir, sub_dir, currentDate), <span class="st">"/"</span>, subsetname, <span class="st">"_"</span>, <span class="st">"Premenopausal_Bootstrap_"</span>, bsseed<span class="sc">*</span>nrbssims, <span class="st">"samp_combinedseed.RDS"</span>, <span class="at">sep=</span><span class="st">""</span>)</span>
+<span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(bsxpref, <span class="at">file=</span>PremenopausalBootstrapResultFile)</span>
+<span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a>  <span class="co">#postmenopausal females</span></span>
+<span id="cb25-29"><a href="#cb25-29" aria-hidden="true" tabindex="-1"></a>bsxpostf<span class="ot">&lt;-</span><span class="fu">readRDS</span>(postmenopausal_bootstrap[<span class="dv">1</span>])</span>
+<span id="cb25-30"><a href="#cb25-30" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>bsseed){</span>
+<span id="cb25-31"><a href="#cb25-31" aria-hidden="true" tabindex="-1"></a>  bsxpostf<span class="ot">&lt;&lt;-</span><span class="fu">rbind</span>(bsxpostf, <span class="fu">readRDS</span>(postmenopausal_bootstrap[i]))</span>
+<span id="cb25-32"><a href="#cb25-32" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-33"><a href="#cb25-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-34"><a href="#cb25-34" aria-hidden="true" tabindex="-1"></a>PostmenopausalBootstrapResultFile<span class="ot">&lt;-</span><span class="fu">paste0</span>(<span class="fu">file.path</span>(main_dir, sub_dir, currentDate), <span class="st">"/"</span>, subsetname, <span class="st">"_"</span>, <span class="st">"Postmenopausal_Bootstrap_"</span>, bsseed<span class="sc">*</span>nrbssims, <span class="st">"samp_combinedseed.RDS"</span>, <span class="at">sep=</span><span class="st">""</span>)</span>
+<span id="cb25-35"><a href="#cb25-35" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(bsxpostf, <span class="at">file=</span>PostmenopausalBootstrapResultFile)</span>
+<span id="cb25-36"><a href="#cb25-36" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="plot-bootstrap-results" class="level2">
+<h2 class="anchored" data-anchor-id="plot-bootstrap-results">Plot bootstrap results</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co">#males</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdataM</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdata[<span class="fu">order</span>(refdata<span class="sc">$</span>lFer),] <span class="co"># order data by lFer</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>fitdata<span class="ot">&lt;-</span>refdata</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>title<span class="ot">=</span><span class="fu">paste0</span>(<span class="st">"Male donors (n="</span>, <span class="fu">nrow</span>(refdataM),<span class="st">")"</span>, <span class="at">sep=</span><span class="st">""</span>)</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">file.exists</span>(MaleBootstrapResultFile)){</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Read bootstrap results</span></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>  bsxm<span class="ot">&lt;-</span><span class="fu">readRDS</span>(MaleBootstrapResultFile)</span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calculate and plot 95% confidence intervals for the bootstrap</span></span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 95% confidence intervals for the lines</span></span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>  x<span class="ot">&lt;-</span><span class="fu">seq</span>(<span class="dv">0</span>,<span class="dv">5</span>, .<span class="dv">01</span>)</span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>  bse<span class="ot">&lt;-</span><span class="fu">c</span>()</span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(bsxm)) bse<span class="ot">&lt;-</span><span class="fu">rbind</span>(bse,<span class="fu">yvalsfitted</span>(x,bsxm[i,]))</span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>  llimfit<span class="ot">&lt;-</span><span class="fu">apply</span>(bse, <span class="dv">2</span>, <span class="cf">function</span>(x) <span class="fu">quantile</span>(x, <span class="fl">0.025</span>))</span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>  ulimfit<span class="ot">&lt;-</span><span class="fu">apply</span>(bse, <span class="dv">2</span>, <span class="cf">function</span>(x) <span class="fu">quantile</span>(x, <span class="fl">0.975</span>))</span>
+<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a>  CIcp<span class="ot">&lt;-</span><span class="fu">quantile</span>(bsxm[,<span class="dv">3</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))</span>
+<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a>  CIsm<span class="ot">&lt;-</span><span class="fu">list</span>(<span class="at">x=</span>x, <span class="at">llimfit=</span>llimfit, <span class="at">ulimfit=</span>ulimfit, <span class="at">CIcp=</span>CIcp)</span>
+<span id="cb26-21"><a href="#cb26-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotHbFer</span>(CIsm)</span>
+<span id="cb26-22"><a href="#cb26-22" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb26-23"><a href="#cb26-23" aria-hidden="true" tabindex="-1"></a>  <span class="co"># plot distribution of the changepoint</span></span>
+<span id="cb26-24"><a href="#cb26-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot</span>(<span class="fu">density</span>(bsxm[,<span class="dv">3</span>], <span class="at">bw=</span>.<span class="dv">003</span>))</span>
+<span id="cb26-25"><a href="#cb26-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-26"><a href="#cb26-26" aria-hidden="true" tabindex="-1"></a><span class="fu">paste0</span>(<span class="st">"CI of changepoint: ["</span>,   <span class="dv">10</span><span class="sc">^</span><span class="fu">quantile</span>(bsxm[,<span class="dv">3</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">1</span>], <span class="st">","</span>,   <span class="dv">10</span><span class="sc">^</span><span class="fu">quantile</span>(bsxm[,<span class="dv">3</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">2</span>], <span class="st">"]"</span>, <span class="st">" CI of slope: ["</span>, <span class="fu">quantile</span>(bsxm[,<span class="dv">2</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">1</span>], <span class="st">","</span>, <span class="fu">quantile</span>(bsxm[,<span class="dv">2</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">2</span>], <span class="st">"]"</span>)</span>
+<span id="cb26-27"><a href="#cb26-27" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(export_files){</span>
+<span id="cb26-28"><a href="#cb26-28" aria-hidden="true" tabindex="-1"></a>llimexportM <span class="ot">&lt;&lt;-</span> <span class="fu">cbind</span>(CIsm<span class="sc">$</span>x, CIsm<span class="sc">$</span>llimfit, <span class="st">"M"</span>)</span>
+<span id="cb26-29"><a href="#cb26-29" aria-hidden="true" tabindex="-1"></a>ulimexportM <span class="ot">&lt;&lt;-</span> <span class="fu">cbind</span>(CIsm<span class="sc">$</span>x, CIsm<span class="sc">$</span>ulimfit, <span class="st">"M"</span>)</span>
+<span id="cb26-30"><a href="#cb26-30" aria-hidden="true" tabindex="-1"></a>CIcpexportM <span class="ot">&lt;&lt;-</span> <span class="fu">c</span>(CIsm<span class="sc">$</span>CIcp[<span class="dv">1</span>], xm[<span class="dv">3</span>],CIsm<span class="sc">$</span>CIcp[<span class="dv">2</span>], <span class="st">"M"</span>)}</span>
+<span id="cb26-31"><a href="#cb26-31" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="2_Analysis_Finland_files/figure-html/plot%20bootstrap%20results-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "-0.467231835587039 0.239400978106598 2.95167053736512 0.378029256724863 0 26"
+[1] "Changepoint: 894.685785309974"
+[1] "SolutionOk: TRUE"</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="2_Analysis_Finland_files/figure-html/plot%20bootstrap%20results-2.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co">#females</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdataF</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdata[<span class="fu">order</span>(refdata<span class="sc">$</span>lFer),] <span class="co"># order data by lFer</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>fitdata<span class="ot">&lt;-</span>refdata</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>title<span class="ot">=</span><span class="fu">paste0</span>(<span class="st">"Female donors (n="</span>, <span class="fu">nrow</span>(refdataF), <span class="st">")"</span>, <span class="at">sep=</span><span class="st">""</span>)</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">file.exists</span>(FemaleBootstrapResultFile)){</span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Read bootstrap results</span></span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a>  bsxf<span class="ot">&lt;-</span><span class="fu">readRDS</span>(FemaleBootstrapResultFile)</span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb28-12"><a href="#cb28-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calculate and plot 95% confidence intervals for the bootstrap</span></span>
+<span id="cb28-13"><a href="#cb28-13" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 95% confidence intervals for the lines</span></span>
+<span id="cb28-14"><a href="#cb28-14" aria-hidden="true" tabindex="-1"></a>  x<span class="ot">&lt;-</span><span class="fu">seq</span>(<span class="dv">0</span>,<span class="dv">5</span>, .<span class="dv">01</span>)</span>
+<span id="cb28-15"><a href="#cb28-15" aria-hidden="true" tabindex="-1"></a>  bse<span class="ot">&lt;-</span><span class="fu">c</span>()</span>
+<span id="cb28-16"><a href="#cb28-16" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(bsxf)) bse<span class="ot">&lt;-</span><span class="fu">rbind</span>(bse,<span class="fu">yvalsfitted</span>(x,bsxf[i,]))</span>
+<span id="cb28-17"><a href="#cb28-17" aria-hidden="true" tabindex="-1"></a>  llimfit<span class="ot">&lt;-</span><span class="fu">apply</span>(bse, <span class="dv">2</span>, <span class="cf">function</span>(x) <span class="fu">quantile</span>(x, <span class="fl">0.025</span>))</span>
+<span id="cb28-18"><a href="#cb28-18" aria-hidden="true" tabindex="-1"></a>  ulimfit<span class="ot">&lt;-</span><span class="fu">apply</span>(bse, <span class="dv">2</span>, <span class="cf">function</span>(x) <span class="fu">quantile</span>(x, <span class="fl">0.975</span>))</span>
+<span id="cb28-19"><a href="#cb28-19" aria-hidden="true" tabindex="-1"></a>  CIcp<span class="ot">&lt;-</span><span class="fu">quantile</span>(bsxf[,<span class="dv">3</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))</span>
+<span id="cb28-20"><a href="#cb28-20" aria-hidden="true" tabindex="-1"></a>  CIsf<span class="ot">&lt;-</span><span class="fu">list</span>(<span class="at">x=</span>x, <span class="at">llimfit=</span>llimfit, <span class="at">ulimfit=</span>ulimfit, <span class="at">CIcp=</span>CIcp)</span>
+<span id="cb28-21"><a href="#cb28-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotHbFer</span>(CIsf)</span>
+<span id="cb28-22"><a href="#cb28-22" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb28-23"><a href="#cb28-23" aria-hidden="true" tabindex="-1"></a>  <span class="co"># plot distribution of the changepoint</span></span>
+<span id="cb28-24"><a href="#cb28-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot</span>(<span class="fu">density</span>(bsxf[,<span class="dv">3</span>], <span class="at">bw=</span>.<span class="dv">003</span>))</span>
+<span id="cb28-25"><a href="#cb28-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-26"><a href="#cb28-26" aria-hidden="true" tabindex="-1"></a><span class="fu">paste0</span>(<span class="st">"CI of changepoint: ["</span>,   <span class="dv">10</span><span class="sc">^</span><span class="fu">quantile</span>(bsxf[,<span class="dv">3</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">1</span>], <span class="st">","</span>,   <span class="dv">10</span><span class="sc">^</span><span class="fu">quantile</span>(bsxf[,<span class="dv">3</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">2</span>], <span class="st">"]"</span>, <span class="st">" CI of slope: ["</span>, <span class="fu">quantile</span>(bsxf[,<span class="dv">2</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">1</span>], <span class="st">","</span>, <span class="fu">quantile</span>(bsxf[,<span class="dv">2</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">2</span>], <span class="st">"]"</span>)</span>
+<span id="cb28-27"><a href="#cb28-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-28"><a href="#cb28-28" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(export_files){llimexportF <span class="ot">&lt;&lt;-</span> <span class="fu">cbind</span>(CIsf<span class="sc">$</span>x, CIsf<span class="sc">$</span>llimfit, <span class="st">"F"</span>)</span>
+<span id="cb28-29"><a href="#cb28-29" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(<span class="fu">rbind</span>(llimexportM, llimexportF), <span class="at">file =</span> <span class="fu">paste0</span>(<span class="fu">file.path</span>(main_dir, export_folder,currentDate,FolderDataset), <span class="st">"/llim_export.rds"</span>))</span>
+<span id="cb28-30"><a href="#cb28-30" aria-hidden="true" tabindex="-1"></a>ulimexportF <span class="ot">&lt;&lt;-</span> <span class="fu">cbind</span>(CIsf<span class="sc">$</span>x, CIsf<span class="sc">$</span>ulimfit, <span class="st">"F"</span>)</span>
+<span id="cb28-31"><a href="#cb28-31" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(<span class="fu">rbind</span>(ulimexportM, ulimexportF), <span class="at">file =</span> <span class="fu">paste0</span>(<span class="fu">file.path</span>(main_dir, export_folder,currentDate,FolderDataset), <span class="st">"/ulim_export.rds"</span>))</span>
+<span id="cb28-32"><a href="#cb28-32" aria-hidden="true" tabindex="-1"></a>CIcpexportF <span class="ot">&lt;&lt;-</span> <span class="fu">c</span>(CIsf<span class="sc">$</span>CIcp[<span class="dv">1</span>], xf[<span class="dv">3</span>],CIsf<span class="sc">$</span>CIcp[<span class="dv">2</span>], <span class="st">"F"</span>)</span>
+<span id="cb28-33"><a href="#cb28-33" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(<span class="fu">rbind</span>(CIcpexportM, CIcpexportF), <span class="at">file =</span> <span class="fu">paste0</span>(<span class="fu">file.path</span>(main_dir, export_folder,currentDate,FolderDataset), <span class="st">"/CIcp_export.rds"</span>))}</span>
+<span id="cb28-34"><a href="#cb28-34" aria-hidden="true" tabindex="-1"></a>} </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="2_Analysis_Finland_files/figure-html/plot%20bootstrap%20results-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "-0.314807790795587 0.197342716095276 1.80617998553375 0.338631187113407 0 26"
+[1] "Changepoint: 64.0000017020503"
+[1] "SolutionOk: TRUE"</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="2_Analysis_Finland_files/figure-html/plot%20bootstrap%20results-4.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(menopausal_status){</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a><span class="co">#premenopausal females</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdatapreF</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdata[<span class="fu">order</span>(refdata<span class="sc">$</span>lFer),] <span class="co"># order data by lFer</span></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>fitdata<span class="ot">&lt;-</span>refdata</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>title<span class="ot">=</span><span class="fu">paste0</span>(<span class="st">"Premenopausal donors (n="</span>, <span class="fu">nrow</span>(refdatapreF), <span class="st">")"</span>, <span class="at">sep=</span><span class="st">""</span>)</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">file.exists</span>(PremenopausalBootstrapResultFile)){</span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Read bootstrap results</span></span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>  bsxpref<span class="ot">&lt;-</span><span class="fu">readRDS</span>(PremenopausalBootstrapResultFile)</span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calculate and plot 95% confidence intervals for the bootstrap</span></span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 95% confidence intervals for the lines</span></span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>  x<span class="ot">&lt;-</span><span class="fu">seq</span>(<span class="dv">0</span>,<span class="dv">5</span>, .<span class="dv">01</span>)</span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>  bse<span class="ot">&lt;-</span><span class="fu">c</span>()</span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(bsxpref)) bse<span class="ot">&lt;-</span><span class="fu">rbind</span>(bse,<span class="fu">yvalsfitted</span>(x,bsxpref[i,]))</span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>  llimfit<span class="ot">&lt;-</span><span class="fu">apply</span>(bse, <span class="dv">2</span>, <span class="cf">function</span>(x) <span class="fu">quantile</span>(x, <span class="fl">0.025</span>))</span>
+<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>  ulimfit<span class="ot">&lt;-</span><span class="fu">apply</span>(bse, <span class="dv">2</span>, <span class="cf">function</span>(x) <span class="fu">quantile</span>(x, <span class="fl">0.975</span>))</span>
+<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a>  CIcp<span class="ot">&lt;-</span><span class="fu">quantile</span>(bsxpref[,<span class="dv">3</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))</span>
+<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a>  CIspref<span class="ot">&lt;-</span><span class="fu">list</span>(<span class="at">x=</span>x, <span class="at">llimfit=</span>llimfit, <span class="at">ulimfit=</span>ulimfit, <span class="at">CIcp=</span>CIcp)</span>
+<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotHbFer</span>(CIspref)</span>
+<span id="cb30-23"><a href="#cb30-23" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb30-24"><a href="#cb30-24" aria-hidden="true" tabindex="-1"></a>  <span class="co"># plot distribution of the changepoint</span></span>
+<span id="cb30-25"><a href="#cb30-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot</span>(<span class="fu">density</span>(bsxpref[,<span class="dv">3</span>], <span class="at">bw=</span>.<span class="dv">003</span>))</span>
+<span id="cb30-26"><a href="#cb30-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-27"><a href="#cb30-27" aria-hidden="true" tabindex="-1"></a><span class="fu">paste0</span>(<span class="st">"CI of changepoint: ["</span>,   <span class="dv">10</span><span class="sc">^</span><span class="fu">quantile</span>(bsxpref[,<span class="dv">3</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">1</span>], <span class="st">","</span>,   <span class="dv">10</span><span class="sc">^</span><span class="fu">quantile</span>(bsxpref[,<span class="dv">3</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">2</span>], <span class="st">"]"</span>, <span class="st">" CI of slope: ["</span>, <span class="fu">quantile</span>(bsxpref[,<span class="dv">2</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">1</span>], <span class="st">","</span>, <span class="fu">quantile</span>(bsxpref[,<span class="dv">2</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">2</span>], <span class="st">"]"</span>)</span>
+<span id="cb30-28"><a href="#cb30-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-29"><a href="#cb30-29" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(export_files){llimexportpreF <span class="ot">&lt;&lt;-</span> <span class="fu">cbind</span>(CIspref<span class="sc">$</span>x, CIspref<span class="sc">$</span>llimfit, <span class="st">"preF"</span>)</span>
+<span id="cb30-30"><a href="#cb30-30" aria-hidden="true" tabindex="-1"></a>ulimexportpreF <span class="ot">&lt;&lt;-</span> <span class="fu">cbind</span>(CIspref<span class="sc">$</span>x, CIspref<span class="sc">$</span>ulimfit, <span class="st">"preF"</span>)</span>
+<span id="cb30-31"><a href="#cb30-31" aria-hidden="true" tabindex="-1"></a>CIcpexportpreF <span class="ot">&lt;&lt;-</span> <span class="fu">c</span>(CIspref<span class="sc">$</span>CIcp[<span class="dv">1</span>], xf[<span class="dv">3</span>],CIspref<span class="sc">$</span>CIcp[<span class="dv">2</span>], <span class="st">"preF"</span>)}</span>
+<span id="cb30-32"><a href="#cb30-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-33"><a href="#cb30-33" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb30-34"><a href="#cb30-34" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="2_Analysis_Finland_files/figure-html/plot%20bootstrap%20results-5.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "-0.389996036323803 0.255972506797269 1.6254880210236 0.307735970203886 0 26"
+[1] "Changepoint: 42.2170634321524"
+[1] "SolutionOk: TRUE"</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="2_Analysis_Finland_files/figure-html/plot%20bootstrap%20results-6.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(menopausal_status){</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a><span class="co">#postmenopausal females</span></span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdatapostF</span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>refdata<span class="ot">&lt;-</span>refdata[<span class="fu">order</span>(refdata<span class="sc">$</span>lFer),] <span class="co"># order data by lFer</span></span>
+<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>fitdata<span class="ot">&lt;-</span>refdata</span>
+<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>title<span class="ot">=</span><span class="fu">paste0</span>(<span class="st">"Postmenopausal donors (n="</span>, <span class="fu">nrow</span>(refdatapostF), <span class="st">")"</span>, <span class="at">sep=</span><span class="st">""</span>)</span>
+<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(<span class="fu">file.exists</span>(PostmenopausalBootstrapResultFile)){</span>
+<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Read bootstrap results</span></span>
+<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>  bsxpostf<span class="ot">&lt;-</span><span class="fu">readRDS</span>(PostmenopausalBootstrapResultFile)</span>
+<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calculate and plot 95% confidence intervals for the bootstrap</span></span>
+<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>  <span class="co"># 95% confidence intervals for the lines</span></span>
+<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>  x<span class="ot">&lt;-</span><span class="fu">seq</span>(<span class="dv">0</span>,<span class="dv">5</span>, .<span class="dv">01</span>)</span>
+<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a>  bse<span class="ot">&lt;-</span><span class="fu">c</span>()</span>
+<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span>(i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(bsxpostf)) bse<span class="ot">&lt;-</span><span class="fu">rbind</span>(bse,<span class="fu">yvalsfitted</span>(x,bsxpostf[i,]))</span>
+<span id="cb32-18"><a href="#cb32-18" aria-hidden="true" tabindex="-1"></a>  llimfit<span class="ot">&lt;-</span><span class="fu">apply</span>(bse, <span class="dv">2</span>, <span class="cf">function</span>(x) <span class="fu">quantile</span>(x, <span class="fl">0.025</span>))</span>
+<span id="cb32-19"><a href="#cb32-19" aria-hidden="true" tabindex="-1"></a>  ulimfit<span class="ot">&lt;-</span><span class="fu">apply</span>(bse, <span class="dv">2</span>, <span class="cf">function</span>(x) <span class="fu">quantile</span>(x, <span class="fl">0.975</span>))</span>
+<span id="cb32-20"><a href="#cb32-20" aria-hidden="true" tabindex="-1"></a>  CIcp<span class="ot">&lt;-</span><span class="fu">quantile</span>(bsxpostf[,<span class="dv">3</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))</span>
+<span id="cb32-21"><a href="#cb32-21" aria-hidden="true" tabindex="-1"></a>  CIspostf<span class="ot">&lt;-</span><span class="fu">list</span>(<span class="at">x=</span>x, <span class="at">llimfit=</span>llimfit, <span class="at">ulimfit=</span>ulimfit, <span class="at">CIcp=</span>CIcp)</span>
+<span id="cb32-22"><a href="#cb32-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plotHbFer</span>(CIspostf)</span>
+<span id="cb32-23"><a href="#cb32-23" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb32-24"><a href="#cb32-24" aria-hidden="true" tabindex="-1"></a>  <span class="co"># plot distribution of the changepoint</span></span>
+<span id="cb32-25"><a href="#cb32-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot</span>(<span class="fu">density</span>(bsxpostf[,<span class="dv">3</span>], <span class="at">bw=</span>.<span class="dv">003</span>))</span>
+<span id="cb32-26"><a href="#cb32-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-27"><a href="#cb32-27" aria-hidden="true" tabindex="-1"></a><span class="fu">paste0</span>(<span class="st">"CI of changepoint: ["</span>,   <span class="dv">10</span><span class="sc">^</span><span class="fu">quantile</span>(bsxpostf[,<span class="dv">3</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">1</span>], <span class="st">","</span>,   <span class="dv">10</span><span class="sc">^</span><span class="fu">quantile</span>(bsxpostf[,<span class="dv">3</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">2</span>], <span class="st">"]"</span>, <span class="st">" CI of slope: ["</span>, <span class="fu">quantile</span>(bsxpostf[,<span class="dv">2</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">1</span>], <span class="st">","</span>, <span class="fu">quantile</span>(bsxpostf[,<span class="dv">2</span>], <span class="fu">c</span>(.<span class="dv">025</span>,<span class="fl">0.975</span>))[<span class="dv">2</span>], <span class="st">"]"</span>)</span>
+<span id="cb32-28"><a href="#cb32-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb32-29"><a href="#cb32-29" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span>(export_files){llimexportpostF <span class="ot">&lt;-</span> <span class="fu">cbind</span>(CIspostf<span class="sc">$</span>x, CIspostf<span class="sc">$</span>llimfit, <span class="st">"postF"</span>)</span>
+<span id="cb32-30"><a href="#cb32-30" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(<span class="fu">rbind</span>(llimexportM, llimexportF, llimexportpreF, llimexportpostF), <span class="at">file =</span> <span class="fu">paste0</span>(<span class="fu">file.path</span>(main_dir, export_folder,currentDate,FolderDataset), <span class="st">"/llim_export.rds"</span>))</span>
+<span id="cb32-31"><a href="#cb32-31" aria-hidden="true" tabindex="-1"></a>ulimexportpostF <span class="ot">&lt;-</span> <span class="fu">cbind</span>(CIspostf<span class="sc">$</span>x, CIspostf<span class="sc">$</span>ulimfit, <span class="st">"postF"</span>)</span>
+<span id="cb32-32"><a href="#cb32-32" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(<span class="fu">rbind</span>(ulimexportM, ulimexportF, ulimexportpreF, ulimexportpostF), <span class="at">file =</span> <span class="fu">paste0</span>(<span class="fu">file.path</span>(main_dir, export_folder,currentDate,FolderDataset), <span class="st">"/ulim_export.rds"</span>))</span>
+<span id="cb32-33"><a href="#cb32-33" aria-hidden="true" tabindex="-1"></a>CIcpexportpostF <span class="ot">&lt;-</span> <span class="fu">c</span>(CIspostf<span class="sc">$</span>CIcp[<span class="dv">1</span>], xf[<span class="dv">3</span>],CIspostf<span class="sc">$</span>CIcp[<span class="dv">2</span>], <span class="st">"postF"</span>)</span>
+<span id="cb32-34"><a href="#cb32-34" aria-hidden="true" tabindex="-1"></a><span class="fu">saveRDS</span>(<span class="fu">rbind</span>(CIcpexportM, CIcpexportF, CIcpexportpreF, CIcpexportpostF), <span class="at">file =</span> <span class="fu">paste0</span>(<span class="fu">file.path</span>(main_dir, export_folder,currentDate,FolderDataset), <span class="st">"/CIcp_export.rds"</span>))}</span>
+<span id="cb32-35"><a href="#cb32-35" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb32-36"><a href="#cb32-36" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="2_Analysis_Finland_files/figure-html/plot%20bootstrap%20results-7.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "-0.281011461486204 0.171764940735305 1.86332285300954 0.384006927230818 0 26"
+[1] "Changepoint: 72.9999988047361"
+[1] "SolutionOk: TRUE"</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="2_Analysis_Finland_files/figure-html/plot%20bootstrap%20results-8.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+</section>
+<section id="exported-data" class="level1">
+<h1>Exported data</h1>
+<p>Below I’ve given a description of what we’re exporting. If you’ve put T in the export_files indicator (line 130), the following files are exported:</p>
+<ul>
+<li><strong>export_data.rds:</strong> this contains jittered lFer and dRefHb values and the sex of a proportion of your data (that you have defined)</li>
+<li><strong>rollmean_export.rds:</strong> this contains 2 variables to make the rollmean line. The lFer values are jittered, sex is original, and the rollmean value is the mean of 500 records before and after a certain record so this will not contain original values.</li>
+<li><strong>sol_export.rds:</strong> this contains 3 rows to plot the solution of the changepoint. There are no original values here.</li>
+<li><strong>llim_export.rds:</strong> this contains 501 data points to make the upper limit of the changepoint solution. There are no original values here.</li>
+<li><strong>ulim_export.rds:</strong> this contains 501 data points to make the lower limit of the changepoint solution. There are no original values here.</li>
+<li><strong>CIcp_export.rds:</strong> this contains the changepoint and it’s CI per sex. There are no original values here.</li>
+</ul>
+<p>Please send your exported data to Amber so we can make plots containing all 4 countries.</p>
+<p>Files are saved in a folder with the name of the dataset used for the analysis if you’ve named your datasets dataset1 to dataset6. If you’ve named them differently, the folder with results will be named after the start date of the analysis. If that is the case for you, to make it more clear for me when collecting all results: please change this to the name of the dataset you’re using (dataset 1 to 6).</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>

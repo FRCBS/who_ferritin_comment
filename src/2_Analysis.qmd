@@ -1,0 +1,315 @@
+---
+title: "Analysis of deltaHb - ferritin association"
+format: 
+    html:
+        embed-resources: true
+---
+
+# Initialization
+
+```{r}
+#| label: libraries
+#| code-fold: true
+#| code-summary: Libraries
+#| message: false
+#| warning: false
+
+library(dplyr)
+library("Hmisc")
+library("zoo")
+library("mcp") # for bayesian changepoint analysis
+library("rjags")
+library("pracma")
+```
+
+In this part of the code we ask you to define:
+
+-   Your main directory (in which we will create a subdirectory for the bootstrap results and where the functions file is located)
+-   Your data file
+
+```{r}
+#| label: define directory and data file
+#define your main directory
+subsetname <- "no_washout_all_all"
+data_dir <- "~/proj/who_ferritin_comment/data"
+src_dir <- "~/proj/who_ferritin_comment/src"
+FileToUse <- paste0("~/proj/who_ferritin_comment/data/FerHb/2023-06-30/", subsetname, ".rds")
+```
+
+```{r}
+#| label: create directories & load data + functions
+#| warning: false
+#| code-fold: true
+setwd(data_dir)
+# setting up the sub directory for bootstrap results and a folder with today's date
+sub_dir <- "bootstrap_results/"
+currentDate <- Sys.Date()
+
+# check if sub directory already exists, otherwise create it 
+# if (file.exists(sub_dir)){
+#       print("The folder for bootstrap results already exists")
+# } else {
+#         # create a new sub directory inside
+#         # the main path
+#         dir.create(file.path(main_dir, sub_dir))
+# }
+# 
+# #check if the folder for today's results already exists, otherwise create it
+# if (file.exists(file.path(sub_dir,currentDate))){
+#       print("Today's folder already exists")
+# } else {
+#         # create a new sub directory inside
+#         # the main path
+#         dir.create(file.path(main_dir, sub_dir,currentDate))
+# }
+
+
+data<-readRDS(FileToUse)
+if(!is.factor(data$Geslacht)){data$Geslacht<-as.factor(data$Geslacht)}
+
+#load the functions needed
+source(file.path(src_dir, "1_Functions.R"))
+```
+
+```{r}
+#| label: base parameters
+#| code-fold: false
+#| code-summary: parameters
+#| message: false
+#| warning: false
+
+#simulation
+dobayes<-F         # perform a bayesian changepoint analysis
+dobootstrap<-T     # perform a bootstrap of the max likelihood estimate for the changepoint 
+printbootstrap<-T  # print the results & progress of the bootstrap (for creating an easy to read quarto document, you may want to set this to F)
+nrbssims<-200        # nr of bootstrapsamples
+bsseed<-2          # seedvalue for the bootstrap
+rollmean_nr<-1000  # nr of samples to use in the rolling maen
+
+# lower and upper limits for the changepoint fit
+# these consist of the intercept, slope, changepoint and standard deviation of the error
+ll=c(-2, 0.005, 0.5, 0.3) # lower limit 
+ll=c(-2, 0.005,  -4, 0.3) # lower limit 
+ul=c( 1,     2,   4, 0.9) # upper limit
+```
+
+# Changepoint analysis
+
+```{r, fig.width=7, fig.height=7}
+#| label: changepoint analysis
+#| code-fold: true
+#| code-summary: analysis
+#| message: false
+#| warning: false
+
+### set male dataset for reference
+refdata<-select_males_only()
+refdata<-refdata[order(refdata$lFer),] # order data by lFer
+refdataM<-refdata
+fitdata<-refdata
+title=paste0("Male donors (n=", nrow(refdataM),")", sep="")
+xm<-plotHbFer()
+
+### set female dataset for reference
+refdata<-select_females_only()
+refdata<-refdata[order(refdata$lFer),] # order data by lFer
+refdataF<-refdata
+fitdata<-refdata
+title=paste0("Female donors (n=", nrow(refdataF), ")", sep="")
+xf<-plotHbFer()
+```
+
+# Bootstrap results
+
+Bootstrap will run only if set to T in parameters.
+
+```{r}
+#| label: do bootstrap
+#| code-fold: true
+#| code-summary: bootstrap
+#| message: false
+#| warning: false
+
+if(dobootstrap){
+
+### set male dataset for reference
+refdata<-select_males_only()
+refdata<-refdata[order(refdata$lFer),] 
+nrow(refdata) 
+length(unique(refdata$KeyID)) 
+nrow(refdata)/length(unique(refdata$KeyID)) 
+sum(refdata$Ferritin<=30)/nrow(refdata)
+length(unique(refdata$KeyID[refdata$Ferritin<=30])) 
+length(unique(refdata$KeyID[refdata$Ferritin<=30]))/length(unique(refdata$KeyID))
+
+
+# copy reference dataset for fitting models (and bootstrapping)
+refdataM<-refdata
+#fitdata<-fitdata[1:1000,]
+### plot lFer vs dRefHb
+fitdata<-refdataM
+#xm<-plotHbFer()
+
+### set female dataset for reference
+refdata<-select_females_only()
+refdata<-refdata[order(refdata$lFer),] 
+nrow(refdata) 
+length(unique(refdata$KeyID)) 
+nrow(refdata)/length(unique(refdata$KeyID)) 
+sum(refdata$Ferritin<=30)/nrow(refdata) 
+length(unique(refdata$KeyID[refdata$Ferritin<=30])) 
+length(unique(refdata$KeyID[refdata$Ferritin<=30]))/length(unique(refdata$KeyID)) 
+
+# copy reference dataset for fitting models (and bootstrapping)
+refdataF<-refdata
+#fitdata<-fitdata[1:1000,]
+fitdata<-refdataF
+#xf<-plotHbFer()
+
+rm(data)
+while (!is.null(dev.list())) dev.off()
+
+for (bsseed in 1:5) {
+  
+  print("")
+  print(paste("seed =",bsseed))
+  print("")
+  
+  ### bootstrap this result
+  refdata<-refdataM
+  fitdata<-refdataM
+  bsxm<-c()
+  nr<-nrow(fitdata)
+  set.seed(bsseed)
+  for (i in 1:nrbssims){
+    fitdata<-refdata[sample(1:nr, nr, replace = T), c("lFer","dRefHb")]
+    bsr<-fminsearch(fitf, xm, lower=ll, upper=ul, method="Hooke-Jeeves")
+    bsxm<-rbind(bsxm, c(bsr$xmin, bsr$convergence, bsr$info$iterations, SolutionOk(bsr$xmin)))
+    # print(paste(i,":",paste(bsr$xmin, collapse = " "), bsr$convergence, bsr$info$iterations))
+    if(printbootstrap){print(paste(i,":",paste(bsxm[i,], collapse = " ")))}
+  }
+  MaleBootstrapResultFile<-paste0("~/proj/who_ferritin_comment/data/bootstrap_results/", Sys.Date(), "/Male_Bootstrap_", subsetname, "_", nrbssims,"_samp_",bsseed, "seed.RDS")
+  saveRDS(bsxm, file=MaleBootstrapResultFile)
+}
+
+for (bsseed in 1:5) {
+  
+  print("")
+  print(paste("seed =",bsseed))
+  print("")
+  
+  ### now bootstrap this result
+  refdata<-refdataF
+  fitdata<-refdataF
+  bsxf<-c()
+  nr<-nrow(fitdata)
+  set.seed(bsseed)
+  for (i in 1:nrbssims){
+    fitdata<-refdata[sample(1:nr, nr, replace = T), c("lFer","dRefHb")]
+    bsr<-fminsearch(fitf, xf, lower=ll, upper=ul, method="Hooke-Jeeves")
+    bsxf<-rbind(bsxf, c(bsr$xmin, bsr$convergence, bsr$info$iterations, SolutionOk(bsr$xmin)))
+    # print(paste(i,":",paste(bsr$xmin, collapse = " "), bsr$convergence, bsr$info$iterations))
+    if(printbootstrap){print(paste(i,":",paste(bsxf[i,], collapse = " ")))}
+  }
+  FemaleBootstrapResultFile<-paste0("~/proj/who_ferritin_comment/data/bootstrap_results/", Sys.Date(), "/Female_Bootstrap_", subsetname,"_", nrbssims,"_samp_", bsseed, "seed.RDS")
+  saveRDS(bsxf, file=FemaleBootstrapResultFile)
+  
+}
+
+}
+```
+
+## Read and combine previous bootstrap results
+
+This is necessary because the bootstrap procedure is split into 200 iterations per sample, to enhance speed.
+
+```{r, fig.width=7, fig.height=7}
+#| label: combine bootstrap results
+#define here your main directory
+
+#this will load bootstrap files from today's folder, adjust if you want to load them from another folder by adjusting the sub_dir/date or hard coding the path of the folder that you want to load bootstrap files from
+load_bootstrap_files(file.path(data_dir, sub_dir, currentDate))
+
+#females:
+bsxf<-readRDS(females_bootstrap[1])
+for (i in 2:bsseed){
+  bsxf<<-rbind(bsxf, readRDS(females_bootstrap[i]))
+}
+
+FemaleBootstrapResultFile<-paste0(file.path(data_dir, sub_dir, currentDate), "/Female_Bootstrap_", subsetname, "_", bsseed*nrbssims, "samp_combinedseed.RDS", sep="")
+saveRDS(bsxf, file=FemaleBootstrapResultFile)
+
+#males:
+bsxm<-readRDS(males_bootstrap[1])
+for (i in 2:bsseed){
+  bsxm<<-rbind(bsxm, readRDS(males_bootstrap[i]))
+}
+
+MaleBootstrapResultFile<-paste0(file.path(data_dir, sub_dir, currentDate),"/Male_Bootstrap_", subsetname, "_", bsseed*nrbssims, "samp_combinedseed.RDS", sep="")
+saveRDS(bsxm, file=MaleBootstrapResultFile)
+```
+
+## Plot bootstrap results
+
+```{r, fig.width=7, fig.height=7}
+#| label: plot bootstrap results
+
+refdata<-refdataM
+refdata<-refdata[order(refdata$lFer),] # order data by lFer
+fitdata<-refdata
+title=paste0("Male donors (n=", nrow(refdataM),")", sep="")
+
+if(file.exists(MaleBootstrapResultFile)){
+  
+  # Read bootstrap results
+  bsxm<-readRDS(MaleBootstrapResultFile)
+
+  # Calculate and plot 95% confidence intervals for the bootstrap
+  # 95% confidence intervals for the lines
+  x<-seq(0,5, .01)
+  bse<-c()
+  for(i in 1:nrow(bsxm)) bse<-rbind(bse,yvalsfitted(x,bsxm[i,]))
+  llimfit<-apply(bse, 2, function(x) quantile(x, 0.025))
+  ulimfit<-apply(bse, 2, function(x) quantile(x, 0.975))
+  CIcp<-quantile(bsxm[,3], c(.025,0.975))
+  CIsm<-list(x=x, llimfit=llimfit, ulimfit=ulimfit, CIcp=CIcp)
+  plotHbFer(CIsm)
+  
+  # plot distribution of the changepoint
+  plot(density(bsxm[,3], bw=.003))
+
+paste0("CI of changepoint: [",   10^quantile(bsxm[,3], c(.025,0.975))[1], ",",   10^quantile(bsxm[,3], c(.025,0.975))[2], "]", " CI of slope: [", quantile(bsxm[,2], c(.025,0.975))[1], ",", quantile(bsxm[,2], c(.025,0.975))[2], "]")
+
+}
+
+
+  
+
+refdata<-refdataF
+refdata<-refdata[order(refdata$lFer),] # order data by lFer
+fitdata<-refdata
+title=paste0("Female donors (n=", nrow(refdataF), ")", sep="")
+
+if(file.exists(FemaleBootstrapResultFile)){
+
+  # Read bootstrap results
+  bsxf<-readRDS(FemaleBootstrapResultFile)
+  
+  # Calculate and plot 95% confidence intervals for the bootstrap
+  # 95% confidence intervals for the lines
+  x<-seq(0,5, .01)
+  bse<-c()
+  for(i in 1:nrow(bsxf)) bse<-rbind(bse,yvalsfitted(x,bsxf[i,]))
+  llimfit<-apply(bse, 2, function(x) quantile(x, 0.025))
+  ulimfit<-apply(bse, 2, function(x) quantile(x, 0.975))
+  CIcp<-quantile(bsxf[,3], c(.025,0.975))
+  CIsf<-list(x=x, llimfit=llimfit, ulimfit=ulimfit, CIcp=CIcp)
+  plotHbFer(CIsf)
+  
+  # plot distribution of the changepoint
+  plot(density(bsxf[,3], bw=.003))
+
+paste0("CI of changepoint: [",   10^quantile(bsxf[,3], c(.025,0.975))[1], ",",   10^quantile(bsxf[,3], c(.025,0.975))[2], "]", " CI of slope: [", quantile(bsxf[,2], c(.025,0.975))[1], ",", quantile(bsxf[,2], c(.025,0.975))[2], "]")
+
+} 
+```
